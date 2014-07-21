@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<plugin name="Zongsoft.Externals.Redis.Terminals"
+        title="Zongsoft.Externals.Redis.Terminals Plugin"
+        author="Zongsoft Corporation"
+        version="1.0"
+        description="Create by: Popeye Zhong at 2014-7-20" >
+
+	<manifest>
+		<dependencies>
+			<dependency name="Zongsoft.Externals.Redis"/>
+		</dependencies>
+	</manifest>
+
+	<extension path="/Workbench/Terminal/Commands">
+		<object name="Redis" value="{path:/Workbench/CommandExecutor/Commands/Redis}" />
+	</extension>
+</plugin>

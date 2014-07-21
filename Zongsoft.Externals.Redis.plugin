@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<plugin name="Zongsoft.Externals.Redis"
+        title="Zongsoft.Externals.Redis Plugin"
+        author="Zongsoft Corporation"
+        version="1.0"
+        description="Create by: Popeye Zhong at 2014-7-20" >
+
+	<manifest>
+		<assemblies>
+			<assembly name="Zongsoft.Externals.Redis" />
+		</assemblies>
+	</manifest>
+
+	<!-- 定义RedisClient对象 -->
+	<extension path="/Workspace/Externals">
+		<object name="Redis" type="ServiceStack.Redis.RedisClient, ServiceStack.Redis">
+			<object.constructor>
+				<parameter type="string" value="192.168.0.54" />
+			</object.constructor>
+		</object>
+	</extension>
+
+	<!-- 定义Redis命令的根节点 -->
+	<extension path="/Workbench/CommandExecutor/Commands">
+		<commandNode name="Redis" />
+	</extension>
+
+	<!-- 定义常用的Redis命令集 -->
+	<extension path="/Workbench/CommandExecutor/Commands/Redis">
+		<object name="Get" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.GetCommand, Zongsoft.Externals.Redis" />
+		<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.SetCommand, Zongsoft.Externals.Redis" />
+		<object name="Increment" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.IncrementCommand, Zongsoft.Externals.Redis" />
+		<object name="Decrement" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DecrementCommand, Zongsoft.Externals.Redis" />
+
+		<commandNode name="Dictionary">
+			<object name="Get" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DictionaryGetCommand, Zongsoft.Externals.Redis" />
+			<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DictionarySetCommand, Zongsoft.Externals.Redis" />
+		</commandNode>
+
+		<commandNode name="Hashset">
+			<object name="Get" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.HashsetGetCommand, Zongsoft.Externals.Redis" />
+			<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.HashsetSetCommand, Zongsoft.Externals.Redis" />
+		</commandNode>
+	</extension>
+</plugin>
