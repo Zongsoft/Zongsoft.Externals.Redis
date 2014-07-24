@@ -61,6 +61,7 @@
     <Compile Include="Commands\HashsetSetCommand.cs" />
     <Compile Include="Commands\RedisCommandBase.cs" />
     <Compile Include="Commands\RedisCommandLoader.cs" />
+    <Compile Include="Commands\RemoveCommand.cs" />
     <Compile Include="Commands\SetCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -27,7 +27,7 @@ namespace Zongsoft.Externals.Redis.Commands
 			var dictionary = new Dictionary<string, string>((parameter.Arguments.Length - 1) / 2);
 			for(int i = 0; i < (parameter.Arguments.Length - 1) / 2; i++)
 			{
-				dictionary.Add(parameter.Arguments[i * 2], parameter.Arguments[i * 2 + 1]);
+				dictionary.Add(parameter.Arguments[i * 2 + 1], parameter.Arguments[i * 2 + 2]);
 			}
 
 			this.Redis.SetRangeInHash(parameter.Arguments[0], dictionary);

@@ -30,6 +30,7 @@
 	<extension path="/Workbench/CommandExecutor/Commands/Redis">
 		<object name="Get" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.GetCommand, Zongsoft.Externals.Redis" />
 		<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.SetCommand, Zongsoft.Externals.Redis" />
+		<object name="Remove" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.RemoveCommand, Zongsoft.Externals.Redis" />
 		<object name="Increment" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.IncrementCommand, Zongsoft.Externals.Redis" />
 		<object name="Decrement" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DecrementCommand, Zongsoft.Externals.Redis" />
 
