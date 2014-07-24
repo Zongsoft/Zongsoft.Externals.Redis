@@ -30,6 +30,9 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(parameter.Arguments.Length == 1)
 				return this.Redis.ScanAllHashEntries(parameter.Arguments[0], (string)parameter.Options["pattern"], (int)parameter.Options["count"]);
 
+			if(parameter.Arguments.Length == 2)
+				return this.Redis.GetValueFromHash(parameter.Arguments[0], parameter.Arguments[1]);
+
 			var keys = new string[parameter.Arguments.Length - 1];
 			Array.Copy(parameter.Arguments, 1, keys, 0, keys.Length);
 
