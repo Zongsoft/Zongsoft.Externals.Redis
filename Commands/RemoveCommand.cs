@@ -6,11 +6,11 @@ namespace Zongsoft.Externals.Redis.Commands
 	public class RemoveCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public RemoveCommand() : base("Set")
+		public RemoveCommand() : base("Remove")
 		{
 		}
 
-		public RemoveCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public RemoveCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Remove")
 		{
 		}
 		#endregion
