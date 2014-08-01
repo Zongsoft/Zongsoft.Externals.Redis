@@ -56,8 +56,10 @@
     <Compile Include="Commands\DictionaryDecrementCommand.cs" />
     <Compile Include="Commands\DictionaryGetCommand.cs" />
     <Compile Include="Commands\DictionaryIncrementCommand.cs" />
+    <Compile Include="Commands\DictionaryRemoveCommand.cs" />
     <Compile Include="Commands\DictionarySetCommand.cs" />
     <Compile Include="Commands\GetCommand.cs" />
+    <Compile Include="Commands\HashsetRemoveCommand.cs" />
     <Compile Include="Commands\IncrementCommand.cs" />
     <Compile Include="Commands\HashsetGetCommand.cs" />
     <Compile Include="Commands\HashsetSetCommand.cs" />

@@ -29,14 +29,14 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class HashsetSetCommand : RedisCommandBase
+	public class HashsetRemoveCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public HashsetSetCommand() : base("Set")
+		public HashsetRemoveCommand() : base("Remove")
 		{
 		}
 
-		public HashsetSetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public HashsetRemoveCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Remove")
 		{
 		}
 		#endregion
@@ -47,16 +47,10 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Arguments.Length < 2)
 				return;
 
-			if(context.Arguments.Length == 2)
+			for(int i = 1; i < context.Arguments.Length; i++)
 			{
-				this.Redis.AddItemToSet(context.Arguments[0], context.Arguments[1]);
-				return;
+				this.Redis.RemoveItemFromSet(context.Arguments[0], context.Arguments[i]);
 			}
-
-			var values = new string[context.Arguments.Length - 1];
-			Array.Copy(context.Arguments, 1, values, 0, values.Length);
-
-			this.Redis.AddRangeToSet(context.Arguments[0], new List<string>(values));
 		}
 		#endregion
 	}
