@@ -29,34 +29,33 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class HashsetSetCommand : RedisCommandBase
+	public class HashsetClearCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public HashsetSetCommand() : base("Set")
+		public HashsetClearCommand() : base("Clear")
 		{
 		}
 
-		public HashsetSetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public HashsetClearCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Clear")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override void Run(Services.CommandContext context)
+		protected override void Run(Services.CommandContext parameter)
 		{
-			if(context.Arguments.Length < 2)
+			if(parameter.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(context.Arguments.Length == 2)
+			foreach(var arg in parameter.Arguments)
 			{
-				this.Redis.AddItemToSet(context.Arguments[0], context.Arguments[1]);
-				return;
+				var sets = this.Redis.Sets[arg];
+
+				if(sets != null)
+					sets.Clear();
 			}
 
-			var values = new string[context.Arguments.Length - 1];
-			Array.Copy(context.Arguments, 1, values, 0, values.Length);
-
-			this.Redis.AddRangeToSet(context.Arguments[0], new List<string>(values));
+			this.Redis.RemoveAll(parameter.Arguments);
 		}
 		#endregion
 	}

@@ -29,34 +29,48 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class HashsetSetCommand : RedisCommandBase
+	[Zongsoft.Services.CommandOption("direction", Type = typeof(ListCommandDirection), DefaultValue = ListCommandDirection.Head, Description = "${Text.ListCommand.Direction}")]
+	public class ListPullCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public HashsetSetCommand() : base("Set")
+		public ListPullCommand() : base("Pull")
 		{
 		}
 
-		public HashsetSetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public ListPullCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Pull")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override void Run(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext parameter)
 		{
-			if(context.Arguments.Length < 2)
+			if(parameter.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(context.Arguments.Length == 2)
+			var direction = (ListCommandDirection)parameter.Options["direction"];
+
+			if(direction == ListCommandDirection.Head)
+				return this.Invoke(parameter.Arguments, name => this.Redis.RemoveStartFromList(name));
+			else
+				return this.Invoke(parameter.Arguments, name => this.Redis.RemoveEndFromList(name));
+		}
+		#endregion
+
+		#region 私有方法
+		private object Invoke(string[] args, Func<string, string> remove)
+		{
+			if(args.Length == 1)
+				return remove(args[0]);
+
+			var result = new List<string>(args.Length);
+
+			foreach(var arg in args)
 			{
-				this.Redis.AddItemToSet(context.Arguments[0], context.Arguments[1]);
-				return;
+				result.Add(remove(arg));
 			}
 
-			var values = new string[context.Arguments.Length - 1];
-			Array.Copy(context.Arguments, 1, values, 0, values.Length);
-
-			this.Redis.AddRangeToSet(context.Arguments[0], new List<string>(values));
+			return result.ToArray();
 		}
 		#endregion
 	}

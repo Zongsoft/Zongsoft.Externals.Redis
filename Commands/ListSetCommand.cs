@@ -29,34 +29,31 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class HashsetSetCommand : RedisCommandBase
+	[Zongsoft.Services.CommandOption("index", Type = typeof(int), Description = "${Text.ListCommand.Index}")]
+	public class ListSetCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public HashsetSetCommand() : base("Set")
+		public ListSetCommand() : base("Set")
 		{
 		}
 
-		public HashsetSetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public ListSetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override void Run(Services.CommandContext context)
+		protected override void Run(Services.CommandContext parameter)
 		{
-			if(context.Arguments.Length < 2)
-				throw new Services.CommandException("Missing arguments.");
+			if(parameter.Arguments.Length < 1)
+				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			if(context.Arguments.Length == 2)
-			{
-				this.Redis.AddItemToSet(context.Arguments[0], context.Arguments[1]);
-				return;
-			}
+			if(parameter.Arguments.Length < 2)
+				throw new Zongsoft.Services.CommandException("Missing value for the element of list.");
 
-			var values = new string[context.Arguments.Length - 1];
-			Array.Copy(context.Arguments, 1, values, 0, values.Length);
+			var index = (int)parameter.Options["index"];
 
-			this.Redis.AddRangeToSet(context.Arguments[0], new List<string>(values));
+			this.Redis.SetItemInList(parameter.Arguments[0], index, parameter.Arguments[1]);
 		}
 		#endregion
 	}

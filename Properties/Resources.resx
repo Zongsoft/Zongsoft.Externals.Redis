@@ -126,6 +126,18 @@
   <data name="Text.DictionaryGetCommand.Pattern" xml:space="preserve">
     <value>表示只获取符合指定模式的字典项目。</value>
   </data>
+  <data name="Text.ListCommand.Count" xml:space="preserve">
+    <value>表示该列表命令要操作的元素数量。</value>
+  </data>
+  <data name="Text.ListCommand.Direction" xml:space="preserve">
+    <value>表示列表命令的增加元素和移除元素的方向。</value>
+  </data>
+  <data name="Text.ListCommand.Exists" xml:space="preserve">
+    <value>表示该命令是否对指定的列表名进行存在性判断，如果为真则指定的列表必须存在才更新其列表值，如果为假则指定的列表必须不存在才创建该列表。默认值为假。</value>
+  </data>
+  <data name="Text.ListCommand.Index" xml:space="preserve">
+    <value>表示该列表命令对应的列表元素的序号，第一个元素的序号为0，并以此类推。也可以使用负数序号，以 -1 表示列表的最后一个元素，-2 表示列表的倒数第二个元素，以此类推。</value>
+  </data>
   <data name="Text.MapGetCommand.All" xml:space="preserve">
     <value>表示该命令将获取哈希集的所有项，如果指定的集合很大时可能会导致返回的数据量过大。应该谨慎使用该选项。</value>
   </data>

@@ -53,24 +53,38 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\DecrementCommand.cs" />
+    <Compile Include="Commands\DictionaryClearCommand.cs" />
+    <Compile Include="Commands\DictionaryCountCommand.cs" />
     <Compile Include="Commands\DictionaryDecrementCommand.cs" />
     <Compile Include="Commands\DictionaryGetCommand.cs" />
     <Compile Include="Commands\DictionaryIncrementCommand.cs" />
     <Compile Include="Commands\DictionaryRemoveCommand.cs" />
     <Compile Include="Commands\DictionarySetCommand.cs" />
     <Compile Include="Commands\GetCommand.cs" />
+    <Compile Include="Commands\HashsetClearCommand.cs" />
+    <Compile Include="Commands\HashsetCountCommand.cs" />
     <Compile Include="Commands\HashsetRemoveCommand.cs" />
     <Compile Include="Commands\IncrementCommand.cs" />
     <Compile Include="Commands\HashsetGetCommand.cs" />
     <Compile Include="Commands\HashsetSetCommand.cs" />
+    <Compile Include="Commands\ListClearCommand.cs" />
+    <Compile Include="Commands\ListCommandDirection.cs" />
+    <Compile Include="Commands\ListCountCommand.cs" />
+    <Compile Include="Commands\ListGetCommand.cs" />
+    <Compile Include="Commands\ListPullCommand.cs" />
+    <Compile Include="Commands\ListPushCommand.cs" />
+    <Compile Include="Commands\ListSetCommand.cs" />
     <Compile Include="Commands\RedisCommandBase.cs" />
     <Compile Include="Commands\RedisCommandLoader.cs" />
     <Compile Include="Commands\RemoveCommand.cs" />
     <Compile Include="Commands\SetCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RedisQueue.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Zongsoft.Externals.Redis.plugin" />
+    <None Include="Zongsoft.Externals.Redis.plugin">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx" />

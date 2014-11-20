@@ -29,34 +29,39 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class HashsetSetCommand : RedisCommandBase
+	[Zongsoft.Services.CommandOption("index", Type = typeof(int), Description = "${Text.ListCommand.Index}")]
+	[Zongsoft.Services.CommandOption("count", Type = typeof(int), DefaultValue = 1, Description = "${Text.ListCommand.Count}")]
+	public class ListGetCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public HashsetSetCommand() : base("Set")
+		public ListGetCommand() : base("Get")
 		{
 		}
 
-		public HashsetSetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public ListGetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Get")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override void Run(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext parameter)
 		{
-			if(context.Arguments.Length < 2)
-				throw new Services.CommandException("Missing arguments.");
+			if(parameter.Arguments.Length < 1)
+				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			if(context.Arguments.Length == 2)
+			var index = (int)parameter.Options["index"];
+			int count;
+
+			if(parameter.Options.TryGetValue<int>("count", out count))
 			{
-				this.Redis.AddItemToSet(context.Arguments[0], context.Arguments[1]);
-				return;
+				if(count != 1)
+				{
+					var ends = index >= 0 ? index + count : index - count;
+					return this.Redis.GetRangeFromList(parameter.Arguments[0], index, ends);
+				}
 			}
 
-			var values = new string[context.Arguments.Length - 1];
-			Array.Copy(context.Arguments, 1, values, 0, values.Length);
-
-			this.Redis.AddRangeToSet(context.Arguments[0], new List<string>(values));
+			return this.Redis.GetItemFromList(parameter.Arguments[0], index);
 		}
 		#endregion
 	}

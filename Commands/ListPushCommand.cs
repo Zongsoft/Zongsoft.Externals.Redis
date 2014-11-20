@@ -29,34 +29,52 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class HashsetSetCommand : RedisCommandBase
+	[Zongsoft.Services.CommandOption("direction", Type = typeof(ListCommandDirection), DefaultValue = ListCommandDirection.Tail, Description = "${Text.ListCommand.Direction}")]
+	public class ListPushCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public HashsetSetCommand() : base("Set")
+		public ListPushCommand() : base("Push")
 		{
 		}
 
-		public HashsetSetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public ListPushCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Push")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override void Run(Services.CommandContext context)
+		protected override void Run(Services.CommandContext parameter)
 		{
-			if(context.Arguments.Length < 2)
+			if(parameter.Arguments.Length < 2)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(context.Arguments.Length == 2)
+			var direction = (ListCommandDirection)parameter.Options["direction"];
+
+			if(direction == ListCommandDirection.Head)
+				this.Invoke(parameter.Arguments,
+					(name, value) => this.Redis.PrependItemToList(name, value),
+					(name, values) => this.Redis.PrependRangeToList(name, System.Linq.Enumerable.ToList(values)));
+			else
+				this.Invoke(parameter.Arguments,
+					(name, value) => this.Redis.AddItemToList(name, value),
+					(name, values) => this.Redis.AddRangeToList(name, System.Linq.Enumerable.ToList(values)));
+		}
+		#endregion
+
+		#region 私有方法
+		private void Invoke(string[] args, Action<string, string> addItem, Action<string, IEnumerable<string>> addRange)
+		{
+			if(args.Length == 2)
 			{
-				this.Redis.AddItemToSet(context.Arguments[0], context.Arguments[1]);
-				return;
+				addItem(args[0], args[1]);
 			}
+			else
+			{
+				var values = new string[args.Length - 1];
+				args.CopyTo(values, 1);
 
-			var values = new string[context.Arguments.Length - 1];
-			Array.Copy(context.Arguments, 1, values, 0, values.Length);
-
-			this.Redis.AddRangeToSet(context.Arguments[0], new List<string>(values));
+				addRange(args[0], values);
+			}
 		}
 		#endregion
 	}

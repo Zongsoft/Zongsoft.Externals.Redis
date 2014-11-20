@@ -48,7 +48,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		protected override object OnExecute(Services.CommandContext parameter)
 		{
 			if(parameter.Arguments.Length < 1)
-				return null;
+				throw new Services.CommandException("Missing arguments.");
 
 			if(parameter.Options.Contains("all"))
 				return this.Redis.GetAllItemsFromSet(parameter.Arguments[0]);

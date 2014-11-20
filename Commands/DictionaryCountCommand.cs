@@ -29,34 +29,35 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class HashsetSetCommand : RedisCommandBase
+	public class DictionaryCountCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public HashsetSetCommand() : base("Set")
+		public DictionaryCountCommand() : base("Count")
 		{
 		}
 
-		public HashsetSetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public DictionaryCountCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Count")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override void Run(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext parameter)
 		{
-			if(context.Arguments.Length < 2)
+			if(parameter.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(context.Arguments.Length == 2)
+			if(parameter.Arguments.Length == 1)
+				return this.Redis.GetHashCount(parameter.Arguments[0]);
+
+			var result = new long[parameter.Arguments.Length];
+
+			for(int i = 0; i < result.Length; i++)
 			{
-				this.Redis.AddItemToSet(context.Arguments[0], context.Arguments[1]);
-				return;
+				result[i] = this.Redis.GetHashCount(parameter.Arguments[i]);
 			}
 
-			var values = new string[context.Arguments.Length - 1];
-			Array.Copy(context.Arguments, 1, values, 0, values.Length);
-
-			this.Redis.AddRangeToSet(context.Arguments[0], new List<string>(values));
+			return result;
 		}
 		#endregion
 	}

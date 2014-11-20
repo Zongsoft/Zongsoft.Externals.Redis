@@ -45,7 +45,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		protected override void Run(Services.CommandContext context)
 		{
 			if(context.Arguments.Length < 2)
-				return;
+				throw new Services.CommandException("Missing arguments.");
 
 			for(int i = 1; i < context.Arguments.Length; i++)
 			{
