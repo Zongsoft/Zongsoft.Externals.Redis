@@ -6,6 +6,7 @@
 
 ## 使用方法
 
+```
 	public class Example
 	{
 		public Zongsoft.Services.CommandExecutorBase Executor
@@ -29,3 +30,4 @@
 			return Utility.ToObject<StorageFile>(dictionary);
 		}
 	}
+```
