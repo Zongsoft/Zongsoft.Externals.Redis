@@ -23,8 +23,11 @@
 
 	<!-- 将RedisQueue挂载到默认服务容器中 -->
 	<extension path="/Workspace/Services">
-		<object name="RedisQueue" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.RedisQueue, Zongsoft.Externals.Redis">
-			<redisQueue.name>default</redisQueue.name>
+		<object name="RedisQueue" type="Zongsoft.Externals.Redis.RedisQueue, Zongsoft.Externals.Redis">
+			<object.constructor>
+				<parameter type="string" value="default" />
+				<parameter type="ServiceStack.Redis.IRedisClient, ServiceStack.Interfaces" value="{path:/Workspace/Externals/Redis}" />
+			</object.constructor>
 		</object>
 	</extension>
 
