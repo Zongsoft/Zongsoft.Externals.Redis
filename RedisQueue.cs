@@ -36,7 +36,7 @@ namespace Zongsoft.Externals.Redis
 	{
 		#region 事件定义
 		public event EventHandler<Zongsoft.Collections.DequeuedEventArgs> Dequeued;
-		public event EventHandler<Zongsoft.Collections.QueueEventArgs> Enqueued;
+		public event EventHandler<Zongsoft.Collections.EnqueuedEventArgs> Enqueued;
 		#endregion
 
 		#region 成员字段
@@ -59,6 +59,9 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 公共属性
+		/// <summary>
+		/// 获取或设置本队列所依附的<seealso cref="ServiceStack.Redis.IRedisClient"/>对象。
+		/// </summary>
 		public ServiceStack.Redis.IRedisClient Redis
 		{
 			get
@@ -74,6 +77,9 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
+		/// <summary>
+		/// 获取或设置队列的名称。
+		/// </summary>
 		public string Name
 		{
 			get
@@ -131,7 +137,12 @@ namespace Zongsoft.Externals.Redis
 
 		public object Dequeue()
 		{
-			return _redis.RemoveStartFromList(_name);
+			var result = _redis.RemoveStartFromList(_name);
+
+			//激发“Dequeued”事件
+			this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.DequeuedReason.Calling));
+
+			return result;
 		}
 
 		public IEnumerable Dequeue(int length)
@@ -141,7 +152,12 @@ namespace Zongsoft.Externals.Redis
 
 			for(int i = 0; i < length; i++)
 			{
-				yield return _redis.RemoveStartFromList(_name);
+				var result = _redis.RemoveStartFromList(_name);
+
+				//激发“Dequeued”事件
+				this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.DequeuedReason.Calling));
+
+				yield return result;
 			}
 		}
 
@@ -151,6 +167,9 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("value");
 
 			_redis.AddItemToList(_name, value);
+
+			//激发“Enqueued”事件
+			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
 		public void Enqueue(IEnumerable<string> values)
@@ -159,6 +178,9 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("values");
 
 			_redis.AddRangeToList(_name, System.Linq.Enumerable.ToList(values));
+
+			//激发“Enqueued”事件
+			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(values, true));
 		}
 
 		public void Enqueue(object value)
@@ -167,6 +189,9 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("value");
 
 			_redis.AddItemToList(_name, this.ConvertValue(value));
+
+			//激发“Enqueued”事件
+			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
 		public void Enqueue(IEnumerable values)
@@ -185,6 +210,9 @@ namespace Zongsoft.Externals.Redis
 			}
 
 			_redis.AddRangeToList(_name, list);
+
+			//激发“Enqueued”事件
+			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(list, true));
 		}
 
 		public IEnumerable Peek(int length)
@@ -220,6 +248,24 @@ namespace Zongsoft.Externals.Redis
 
 			var items = _redis.GetRangeFromList(_name, index, index + array.Length);
 			Array.Copy(items.ToArray(), array, array.Length);
+		}
+		#endregion
+
+		#region 激发事件
+		protected virtual void OnDequeued(Zongsoft.Collections.DequeuedEventArgs args)
+		{
+			var dequeued = this.Dequeued;
+
+			if(dequeued != null)
+				dequeued(this, args);
+		}
+
+		protected virtual void OnEnqueued(Zongsoft.Collections.EnqueuedEventArgs args)
+		{
+			var enqueued = this.Enqueued;
+
+			if(enqueued != null)
+				enqueued(this, args);
 		}
 		#endregion
 
