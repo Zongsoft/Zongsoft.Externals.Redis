@@ -26,33 +26,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace Zongsoft.Externals.Redis.Commands
+namespace Zongsoft.Externals.Redis
 {
-	public class GetCommand : RedisCommandBase
+	public interface IRedisQueue : Zongsoft.Collections.IQueue
 	{
-		#region 构造函数
-		public GetCommand() : base("Get")
+		/// <summary>
+		/// 获取当前<seealso cref="IRedisQueue"/>队列的名称。
+		/// </summary>
+		string Name
 		{
+			get;
 		}
-
-		public GetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Get")
-		{
-		}
-		#endregion
-
-		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
-		{
-			if(parameter.Arguments.Length < 1)
-				return null;
-
-			if(parameter.Arguments.Length == 1)
-				return this.Redis.GetValue(parameter.Arguments[0]);
-
-			return this.Redis.GetValues(parameter.Arguments.ToList());
-		}
-		#endregion
 	}
 }

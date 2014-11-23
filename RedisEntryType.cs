@@ -25,34 +25,17 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.ComponentModel;
 
-namespace Zongsoft.Externals.Redis.Commands
+namespace Zongsoft.Externals.Redis
 {
-	public class GetCommand : RedisCommandBase
+	public enum RedisEntryType
 	{
-		#region 构造函数
-		public GetCommand() : base("Get")
-		{
-		}
-
-		public GetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Get")
-		{
-		}
-		#endregion
-
-		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
-		{
-			if(parameter.Arguments.Length < 1)
-				return null;
-
-			if(parameter.Arguments.Length == 1)
-				return this.Redis.GetValue(parameter.Arguments[0]);
-
-			return this.Redis.GetValues(parameter.Arguments.ToList());
-		}
-		#endregion
+		None = 0,
+		String = 1,
+		List = 2,
+		Set = 3,
+		SortedSet = 4,
+		Dictionary = 5,
 	}
 }

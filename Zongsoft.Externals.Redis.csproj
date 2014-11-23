@@ -78,10 +78,21 @@
     <Compile Include="Commands\RedisCommandLoader.cs" />
     <Compile Include="Commands\RemoveCommand.cs" />
     <Compile Include="Commands\SetCommand.cs" />
+    <Compile Include="Configuration\RedisConfigurationElement.cs" />
+    <Compile Include="IRedisDictionary.cs" />
+    <Compile Include="IRedisQueue.cs" />
+    <Compile Include="IRedisService.cs" />
+    <Compile Include="IRedisSet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RedisDictionary.cs" />
+    <Compile Include="RedisEntryType.cs" />
+    <Compile Include="RedisException.cs" />
     <Compile Include="RedisQueue.cs" />
+    <Compile Include="RedisService.cs" />
+    <Compile Include="RedisSet.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Zongsoft.Externals.Redis.option" />
     <None Include="Zongsoft.Externals.Redis.plugin">
       <SubType>Designer</SubType>
     </None>
@@ -89,6 +100,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -26,33 +26,34 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace Zongsoft.Externals.Redis.Commands
+namespace Zongsoft.Externals.Redis
 {
-	public class GetCommand : RedisCommandBase
+	public interface IRedisDictionary : IDictionary<string, string>
 	{
-		#region 构造函数
-		public GetCommand() : base("Get")
+		/// <summary>
+		/// 获取当前<seealso cref="IRedisDictionary"/>字典的名称。
+		/// </summary>
+		string Name
 		{
+			get;
 		}
 
-		public GetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Get")
-		{
-		}
-		#endregion
+		/// <summary>
+		/// 批量新增指定的键值对集合到字典中。
+		/// </summary>
+		/// <param name="items"></param>
+		void AddRange(IEnumerable<KeyValuePair<string, string>> items);
 
-		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
-		{
-			if(parameter.Arguments.Length < 1)
-				return null;
+		/// <summary>
+		/// 尝试新增一个指定的键值对，如果指定的键已存在则不执行任何操作并返回假(false)。
+		/// </summary>
+		/// <param name="key">要新增的键。</param>
+		/// <param name="value">要新增的值。</param>
+		/// <returns>如果新增成功则返回真(true)，否则返回假(false)。</returns>
+		bool TryAdd(string key, string value);
 
-			if(parameter.Arguments.Length == 1)
-				return this.Redis.GetValue(parameter.Arguments[0]);
-
-			return this.Redis.GetValues(parameter.Arguments.ToList());
-		}
-		#endregion
+		long Increment(string key, int interval = 1);
+		long Decrement(string key, int interval = 1);
 	}
 }

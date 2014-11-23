@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<options>
+	<option path="/Externals/Redis">
+		<default name="localhost" address="127.0.0.1" />
+	</option>
+</options>

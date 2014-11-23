@@ -32,7 +32,7 @@ using System.Text;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisQueue : Zongsoft.Collections.IQueue
+	public class RedisQueue : IRedisQueue, Zongsoft.Collections.IQueue
 	{
 		#region 事件定义
 		public event EventHandler<Zongsoft.Collections.DequeuedEventArgs> Dequeued;
@@ -60,24 +60,6 @@ namespace Zongsoft.Externals.Redis
 
 		#region 公共属性
 		/// <summary>
-		/// 获取或设置本队列所依附的<seealso cref="ServiceStack.Redis.IRedisClient"/>对象。
-		/// </summary>
-		public ServiceStack.Redis.IRedisClient Redis
-		{
-			get
-			{
-				return _redis;
-			}
-			set
-			{
-				if(value == null)
-					throw new ArgumentNullException();
-
-				_redis = value;
-			}
-		}
-
-		/// <summary>
 		/// 获取或设置队列的名称。
 		/// </summary>
 		public string Name
@@ -92,6 +74,24 @@ namespace Zongsoft.Externals.Redis
 					throw new ArgumentNullException();
 
 				_name = value.Trim();
+			}
+		}
+
+		/// <summary>
+		/// 获取或设置本队列所依附的<seealso cref="ServiceStack.Redis.IRedisClient"/>对象。
+		/// </summary>
+		public ServiceStack.Redis.IRedisClient Redis
+		{
+			get
+			{
+				return _redis;
+			}
+			set
+			{
+				if(value == null)
+					throw new ArgumentNullException();
+
+				_redis = value;
 			}
 		}
 
