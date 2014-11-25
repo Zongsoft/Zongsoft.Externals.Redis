@@ -29,35 +29,33 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class ListCountCommand : RedisCommandBase
+	public class QueueClearCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public ListCountCommand() : base("Count")
+		public QueueClearCommand() : base("Clear")
 		{
 		}
 
-		public ListCountCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Count")
+		public QueueClearCommand(IRedisService redis) : base(redis, "Clear")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
+		protected override void Run(Services.CommandContext parameter)
 		{
 			if(parameter.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(parameter.Arguments.Length == 1)
-				return this.Redis.GetListCount(parameter.Arguments[0]);
-
-			var result = new long[parameter.Arguments.Length];
-
-			for(int i = 0; i < result.Length; i++)
+			foreach(var arg in parameter.Arguments)
 			{
-				result[i] = this.Redis.GetListCount(parameter.Arguments[i]);
+				var queue = this.Redis.GetQueue(arg);
+
+				if(queue != null)
+					queue.Clear();
 			}
 
-			return result;
+			this.Redis.RemoveRange(parameter.Arguments);
 		}
 		#endregion
 	}

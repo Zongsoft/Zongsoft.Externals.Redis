@@ -36,7 +36,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public HashsetCountCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Count")
+		public HashsetCountCommand(IRedisService redis) : base(redis, "Count")
 		{
 		}
 		#endregion
@@ -48,13 +48,13 @@ namespace Zongsoft.Externals.Redis.Commands
 				throw new Services.CommandException("Missing arguments.");
 
 			if(parameter.Arguments.Length == 1)
-				return this.Redis.GetSetCount(parameter.Arguments[0]);
+				return this.Redis.GetHashset(parameter.Arguments[0]).Count;
 
 			var result = new long[parameter.Arguments.Length];
 
 			for(int i = 0; i < result.Length; i++)
 			{
-				result[i] = this.Redis.GetSetCount(parameter.Arguments[i]);
+				result[i] = this.Redis.GetHashset(parameter.Arguments[i]).Count;
 			}
 
 			return result;

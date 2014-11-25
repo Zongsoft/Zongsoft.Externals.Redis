@@ -129,9 +129,6 @@
   <data name="Text.ListCommand.Count" xml:space="preserve">
     <value>表示该列表命令要操作的元素数量。</value>
   </data>
-  <data name="Text.ListCommand.Direction" xml:space="preserve">
-    <value>表示列表命令的增加元素和移除元素的方向。</value>
-  </data>
   <data name="Text.ListCommand.Exists" xml:space="preserve">
     <value>表示该命令是否对指定的列表名进行存在性判断，如果为真则指定的列表必须存在才更新其列表值，如果为假则指定的列表必须不存在才创建该列表。默认值为假。</value>
   </data>
@@ -150,13 +147,10 @@
   <data name="Text.SetCommand.Duration" xml:space="preserve">
     <value>表示设置项的过期期限，类型为 TimeSpan。</value>
   </data>
-  <data name="Text.SetCommand.Exists" xml:space="preserve">
-    <value>表示该命令是否对指定的键进行存在性判断，如果为真则指定的键必须存在才更新其值，如果为假则指定的键必须不存在才新增该项。如果不指定该选项则始终设置。</value>
-  </data>
   <data name="Text.SetCommand.Expires" xml:space="preserve">
     <value>表示设置项的过期时间。</value>
   </data>
-  <data name="Text.SetCommand.Pairs" xml:space="preserve">
-    <value>表示该命令的参数是键值对，即 Arguments 的奇数项为设置的键，偶数项为设置的值。</value>
+  <data name="Text.SetCommand.NotExists" xml:space="preserve">
+    <value>表示该命令是否对指定的键进行存在性判断，如果包含该选项则表示只有当指定的键不存在才新增该项；如果不指定该选项则始终设置。</value>
   </data>
 </root>

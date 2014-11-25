@@ -40,10 +40,10 @@ namespace Zongsoft.Externals.Redis
 		}
 
 		/// <summary>
-		/// 批量新增指定的键值对集合到字典中。
+		/// 批量设置指定的键值对集合到字典中，如果指定键值对的键已存在则覆盖保存。
 		/// </summary>
-		/// <param name="items"></param>
-		void AddRange(IEnumerable<KeyValuePair<string, string>> items);
+		/// <param name="items">指定的要批量设置的键值对集。</param>
+		void SetRange(IEnumerable<KeyValuePair<string, string>> items);
 
 		/// <summary>
 		/// 尝试新增一个指定的键值对，如果指定的键已存在则不执行任何操作并返回假(false)。
@@ -52,6 +52,8 @@ namespace Zongsoft.Externals.Redis
 		/// <param name="value">要新增的值。</param>
 		/// <returns>如果新增成功则返回真(true)，否则返回假(false)。</returns>
 		bool TryAdd(string key, string value);
+
+		IEnumerable<string> GetValues(params string[] keys);
 
 		long Increment(string key, int interval = 1);
 		long Decrement(string key, int interval = 1);

@@ -29,7 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisSet : IRedisSet
+	public class RedisSet : IRedisHashset
 	{
 		#region 成员字段
 		private string _name;
@@ -160,6 +160,11 @@ namespace Zongsoft.Externals.Redis
 		public void Add(string item)
 		{
 			_redis.AddItemToSet(_name, item);
+		}
+
+		public void AddRange(params string[] items)
+		{
+			_redis.AddRangeToSet(_name, System.Linq.Enumerable.ToList(items));
 		}
 
 		public void Clear()

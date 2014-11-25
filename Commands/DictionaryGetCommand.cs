@@ -39,7 +39,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public DictionaryGetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Get")
+		public DictionaryGetCommand(IRedisService redis) : base(redis, "Get")
 		{
 		}
 		#endregion
@@ -48,21 +48,25 @@ namespace Zongsoft.Externals.Redis.Commands
 		protected override object OnExecute(Services.CommandContext parameter)
 		{
 			if(parameter.Arguments.Length < 1)
-				return null;
+				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			if(parameter.Options.Contains("all"))
-				return this.Redis.GetAllEntriesFromHash(parameter.Arguments[0]);
+			var dictionary = this.Redis.GetDictionary(parameter.Arguments[0]);
 
-			if(parameter.Arguments.Length == 1)
-				return this.Redis.ScanAllHashEntries(parameter.Arguments[0], (string)parameter.Options["pattern"], (int)parameter.Options["count"]);
-
-			if(parameter.Arguments.Length == 2)
-				return this.Redis.GetValueFromHash(parameter.Arguments[0], parameter.Arguments[1]);
+			switch(parameter.Arguments.Length)
+			{
+				case 1:
+					if(parameter.Options.Contains("all"))
+						return (IEnumerable<KeyValuePair<string, string>>)dictionary;
+					else
+						throw new Zongsoft.Services.CommandException("Missing arguments.");
+				case 2:
+					return dictionary[parameter.Arguments[1]];
+			}
 
 			var keys = new string[parameter.Arguments.Length - 1];
 			Array.Copy(parameter.Arguments, 1, keys, 0, keys.Length);
 
-			return this.Redis.GetValuesFromHash(parameter.Arguments[0], keys);
+			return dictionary.GetValues(keys);
 		}
 		#endregion
 	}

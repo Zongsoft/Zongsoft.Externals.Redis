@@ -140,7 +140,7 @@ namespace Zongsoft.Externals.Redis
 			var result = _redis.RemoveStartFromList(_name);
 
 			//激发“Dequeued”事件
-			this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.DequeuedReason.Calling));
+			this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.CollectionRemovedReason.Remove));
 
 			return result;
 		}
@@ -155,7 +155,7 @@ namespace Zongsoft.Externals.Redis
 				var result = _redis.RemoveStartFromList(_name);
 
 				//激发“Dequeued”事件
-				this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.DequeuedReason.Calling));
+				this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.CollectionRemovedReason.Remove));
 
 				yield return result;
 			}

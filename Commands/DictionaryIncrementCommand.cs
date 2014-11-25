@@ -29,6 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
+	[Zongsoft.Services.CommandOption("interval", Type = typeof(int), DefaultValue = 1)]
 	public class DictionaryIncrementCommand : RedisCommandBase
 	{
 		#region 构造函数
@@ -36,7 +37,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public DictionaryIncrementCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Increment")
+		public DictionaryIncrementCommand(IRedisService redis) : base(redis, "Increment")
 		{
 		}
 		#endregion
@@ -45,21 +46,11 @@ namespace Zongsoft.Externals.Redis.Commands
 		protected override object OnExecute(Services.CommandContext parameter)
 		{
 			if(parameter.Arguments.Length < 2)
-				return 0L;
+				throw new Zongsoft.Services.CommandException("The arguments is not enough.");
 
-			int interval = 1;
-			double? intervalDouble = null;
+			int interval = (int)parameter.Options["interval"];
 
-			if(parameter.Arguments.Length > 2)
-			{
-				if(!int.TryParse(parameter.Arguments[2], out interval))
-					intervalDouble = double.Parse(parameter.Arguments[2]);
-			}
-
-			if(intervalDouble.HasValue)
-				return this.Redis.IncrementValueInHash(parameter.Arguments[0], parameter.Arguments[1], intervalDouble.Value);
-			else
-				return this.Redis.IncrementValueInHash(parameter.Arguments[0], parameter.Arguments[1], interval);
+			return this.Redis.GetDictionary(parameter.Arguments[0]).Increment(parameter.Arguments[1], interval);
 		}
 		#endregion
 	}

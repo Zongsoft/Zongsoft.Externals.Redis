@@ -31,7 +31,7 @@ namespace Zongsoft.Externals.Redis.Commands
 	public abstract class RedisCommandBase : Zongsoft.Services.CommandBase<Zongsoft.Services.CommandContext>
 	{
 		#region 成员字段
-		private ServiceStack.Redis.IRedisClient _redis;
+		private IRedisService _redis;
 		#endregion
 
 		#region 构造函数
@@ -43,19 +43,19 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		protected RedisCommandBase(ServiceStack.Redis.IRedisClient redis)
+		protected RedisCommandBase(IRedisService redis)
 		{
 			_redis = redis;
 		}
 
-		protected RedisCommandBase(ServiceStack.Redis.IRedisClient redis, string name) : base(name)
+		protected RedisCommandBase(IRedisService redis, string name) : base(name)
 		{
 			_redis = redis;
 		}
 		#endregion
 
 		#region 公共属性
-		public ServiceStack.Redis.IRedisClient Redis
+		public IRedisService Redis
 		{
 			get
 			{

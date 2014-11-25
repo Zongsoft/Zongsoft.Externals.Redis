@@ -29,41 +29,35 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class RedisCommandLoader : Zongsoft.Services.CommandLoaderBase
+	[Zongsoft.Services.CommandOption("index", Type = typeof(int), Description = "${Text.ListCommand.Index}")]
+	[Zongsoft.Services.CommandOption("count", Type = typeof(int), DefaultValue = 1, Description = "${Text.ListCommand.Count}")]
+	public class QueueTakeCommand : RedisCommandBase
 	{
-		#region 成员字段
-		private ServiceStack.Redis.IRedisClient _redis;
-		#endregion
-
-		#region 公共属性
-		public ServiceStack.Redis.IRedisClient Redis
+		#region 构造函数
+		public QueueTakeCommand() : base("Take")
 		{
-			get
-			{
-				return _redis;
-			}
-			set
-			{
-				if(value == null)
-					throw new ArgumentNullException();
+		}
 
-				_redis = value;
-			}
+		public QueueTakeCommand(IRedisService redis) : base(redis, "Take")
+		{
 		}
 		#endregion
 
-		#region 加载方法
-		protected override bool OnLoad(Services.CommandTreeNode node)
+		#region 执行方法
+		protected override object OnExecute(Services.CommandContext parameter)
 		{
-			node.Children.Add("List");
-			node.Children.Add("Hashset");
-			node.Children.Add("Dictionary");
+			if(parameter.Arguments.Length < 1)
+				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			node.Children.Add(new GetCommand(_redis));
-			node.Children.Add(new SetCommand(_redis));
+			var index = (int)parameter.Options["index"];
+			var queue = this.Redis.GetQueue(parameter.Arguments[0]);
 
-			//返回加载成功
-			return true;
+			int count;
+
+			if(parameter.Options.TryGetValue<int>("count", out count))
+				return queue.Take(index, count);
+
+			return queue.Take(index);
 		}
 		#endregion
 	}

@@ -4,7 +4,7 @@
         title="Zongsoft.Externals.Redis Plugin"
         author="Zongsoft Corporation"
         version="1.0"
-        description="Create by: Popeye Zhong at 2014-07-20, last modified: 2014-11-20" >
+        description="Create by: Popeye Zhong at 2014-07-20, last modified: 2014-11-24" >
 
 	<manifest>
 		<assemblies>
@@ -12,23 +12,19 @@
 		</assemblies>
 	</manifest>
 
-	<!-- 定义RedisClient对象 -->
+	<!-- 定义Redis服务对象 -->
 	<extension path="/Workspace/Externals">
-		<object name="Redis" type="ServiceStack.Redis.RedisClient, ServiceStack.Redis">
+		<object name="Redis" type="Zongsoft.Externals.Redis.RedisService, Zongsoft.Externals.Redis">
 			<object.constructor>
-				<parameter type="string" value="192.168.0.54" />
+				<parameter type="Zongsoft.Externals.Redis.Configuration.RedisConfigurationElement, Zongsoft.Externals.Redis"
+				           value="{opt:/Externals/Redis/Default}" />
 			</object.constructor>
 		</object>
 	</extension>
 
-	<!-- 将RedisQueue挂载到默认服务容器中 -->
+	<!-- 将Redis服务对象挂载到默认服务容器中 -->
 	<extension path="/Workspace/Services">
-		<object name="RedisQueue" type="Zongsoft.Externals.Redis.RedisQueue, Zongsoft.Externals.Redis">
-			<object.constructor>
-				<parameter type="string" value="zongsoft.queue.default" />
-				<parameter type="ServiceStack.Redis.IRedisClient, ServiceStack.Interfaces" value="{path:/Workspace/Externals/Redis}" />
-			</object.constructor>
-		</object>
+		<object name="Redis" value="{path:/Workspace/Externals/Redis}" />
 	</extension>
 
 	<!-- 定义Redis命令的根节点 -->
@@ -44,13 +40,12 @@
 		<object name="Increment" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.IncrementCommand, Zongsoft.Externals.Redis" />
 		<object name="Decrement" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DecrementCommand, Zongsoft.Externals.Redis" />
 
-		<commandNode name="List">
-			<object name="Get" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.ListGetCommand, Zongsoft.Externals.Redis" />
-			<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.ListSetCommand, Zongsoft.Externals.Redis" />
-			<object name="Count" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.ListCountCommand, Zongsoft.Externals.Redis" />
-			<object name="Clear" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.ListClearCommand, Zongsoft.Externals.Redis" />
-			<object name="Pull" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.ListPullCommand, Zongsoft.Externals.Redis" />
-			<object name="Push" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.ListPushCommand, Zongsoft.Externals.Redis" />
+		<commandNode name="Queue">
+			<object name="Dequeue" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueDequeueCommand, Zongsoft.Externals.Redis" />
+			<object name="Enqueue" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueEnqueueCommand, Zongsoft.Externals.Redis" />
+			<object name="Count" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueCountCommand, Zongsoft.Externals.Redis" />
+			<object name="Clear" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueClearCommand, Zongsoft.Externals.Redis" />
+			<object name="Take" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueTakeCommand, Zongsoft.Externals.Redis" />
 		</commandNode>
 
 		<commandNode name="Dictionary">

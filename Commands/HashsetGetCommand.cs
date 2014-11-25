@@ -39,7 +39,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public HashsetGetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Get")
+		public HashsetGetCommand(IRedisService redis) : base(redis, "Get")
 		{
 		}
 		#endregion
@@ -50,10 +50,9 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(parameter.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(parameter.Options.Contains("all"))
-				return this.Redis.GetAllItemsFromSet(parameter.Arguments[0]);
+			var hashset = this.Redis.GetHashset(parameter.Arguments[0]);
 
-			return this.Redis.ScanAllSetItems(parameter.Arguments[0], (string)parameter.Options["pattern"], (int)parameter.Options["count"]);
+			return (IEnumerable<string>)hashset;
 		}
 		#endregion
 	}

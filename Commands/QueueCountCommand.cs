@@ -29,52 +29,35 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	[Zongsoft.Services.CommandOption("direction", Type = typeof(ListCommandDirection), DefaultValue = ListCommandDirection.Tail, Description = "${Text.ListCommand.Direction}")]
-	public class ListPushCommand : RedisCommandBase
+	public class QueueCountCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public ListPushCommand() : base("Push")
+		public QueueCountCommand() : base("Count")
 		{
 		}
 
-		public ListPushCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Push")
+		public QueueCountCommand(IRedisService redis) : base(redis, "Count")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override void Run(Services.CommandContext parameter)
+		protected override object OnExecute(Services.CommandContext parameter)
 		{
-			if(parameter.Arguments.Length < 2)
+			if(parameter.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			var direction = (ListCommandDirection)parameter.Options["direction"];
+			if(parameter.Arguments.Length == 1)
+				return this.Redis.GetHashset(parameter.Arguments[0]).Count;
 
-			if(direction == ListCommandDirection.Head)
-				this.Invoke(parameter.Arguments,
-					(name, value) => this.Redis.PrependItemToList(name, value),
-					(name, values) => this.Redis.PrependRangeToList(name, System.Linq.Enumerable.ToList(values)));
-			else
-				this.Invoke(parameter.Arguments,
-					(name, value) => this.Redis.AddItemToList(name, value),
-					(name, values) => this.Redis.AddRangeToList(name, System.Linq.Enumerable.ToList(values)));
-		}
-		#endregion
+			var result = new long[parameter.Arguments.Length];
 
-		#region 私有方法
-		private void Invoke(string[] args, Action<string, string> addItem, Action<string, IEnumerable<string>> addRange)
-		{
-			if(args.Length == 2)
+			for(int i = 0; i < result.Length; i++)
 			{
-				addItem(args[0], args[1]);
+				result[i] = this.Redis.GetQueue(parameter.Arguments[i]).Count;
 			}
-			else
-			{
-				var values = new string[args.Length - 1];
-				args.CopyTo(values, 1);
 
-				addRange(args[0], values);
-			}
+			return result;
 		}
 		#endregion
 	}

@@ -36,28 +36,33 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public DictionarySetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Set")
+		public DictionarySetCommand(IRedisService redis) : base(redis, "Set")
 		{
 		}
 		#endregion
 
 		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
+		protected override void Run(Services.CommandContext parameter)
 		{
 			if(parameter.Arguments.Length < 3)
-				return null;
+				throw new Zongsoft.Services.CommandException("Missing arguments.");
+
+			var dictionary = this.Redis.GetDictionary(parameter.Arguments[0]);
 
 			if(parameter.Arguments.Length == 3)
-				return this.Redis.SetEntryInHash(parameter.Arguments[0], parameter.Arguments[1], parameter.Arguments[2]);
-
-			var dictionary = new Dictionary<string, string>((parameter.Arguments.Length - 1) / 2);
-			for(int i = 0; i < (parameter.Arguments.Length - 1) / 2; i++)
 			{
-				dictionary.Add(parameter.Arguments[i * 2 + 1], parameter.Arguments[i * 2 + 2]);
+				dictionary[parameter.Arguments[1]] = parameter.Arguments[2];
+				return;
 			}
 
-			this.Redis.SetRangeInHash(parameter.Arguments[0], dictionary);
-			return true;
+			var items = new KeyValuePair<string, string>[(parameter.Arguments.Length - 1) / 2];
+
+			for(int i = 0; i < items.Length; i++)
+			{
+				items[i] = new KeyValuePair<string,string>(parameter.Arguments[i * 2 + 1], parameter.Arguments[i * 2 + 2]);
+			}
+
+			dictionary.SetRange(items);
 		}
 		#endregion
 	}

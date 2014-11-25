@@ -37,7 +37,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public GetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Get")
+		public GetCommand(IRedisService redis) : base(redis, "Get")
 		{
 		}
 		#endregion
@@ -46,12 +46,12 @@ namespace Zongsoft.Externals.Redis.Commands
 		protected override object OnExecute(Services.CommandContext parameter)
 		{
 			if(parameter.Arguments.Length < 1)
-				return null;
+				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
 			if(parameter.Arguments.Length == 1)
 				return this.Redis.GetValue(parameter.Arguments[0]);
 
-			return this.Redis.GetValues(parameter.Arguments.ToList());
+			return this.Redis.GetValues(parameter.Arguments);
 		}
 		#endregion
 	}

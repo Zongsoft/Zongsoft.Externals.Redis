@@ -29,6 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
+	[Zongsoft.Services.CommandOption("interval", Type = typeof(int), DefaultValue = 1)]
 	public class DecrementCommand : RedisCommandBase
 	{
 		#region 构造函数
@@ -36,7 +37,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public DecrementCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Decrement")
+		public DecrementCommand(IRedisService redis) : base(redis, "Decrement")
 		{
 		}
 		#endregion
@@ -45,14 +46,21 @@ namespace Zongsoft.Externals.Redis.Commands
 		protected override object OnExecute(Services.CommandContext parameter)
 		{
 			if(parameter.Arguments.Length < 1)
-				return 0L;
+				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			int interval = 1;
+			int interval = (int)parameter.Options["interval"];
 
-			if(parameter.Arguments.Length > 1 && int.TryParse(parameter.Arguments[1], out interval))
-				return this.Redis.DecrementValueBy(parameter.Arguments[0], interval);
-			else
-				return this.Redis.DecrementValue(parameter.Arguments[0]);
+			if(parameter.Arguments.Length == 1)
+				return this.Redis.Decrement(parameter.Arguments[0], interval);
+
+			var result = new long[parameter.Arguments.Length];
+
+			for(int i = 0; i < parameter.Arguments.Length; i++)
+			{
+				result[i] = this.Redis.Decrement(parameter.Arguments[i], interval);
+			}
+
+			return result;
 		}
 		#endregion
 	}

@@ -42,12 +42,13 @@ namespace Zongsoft.Externals.Redis
 		private int _databaseId;
 		private int _isDisposed;
 		private TimeSpan _timeout;
-		private ConcurrentDictionary<int, Zongsoft.Common.ObjectCache<object>> _caches;
+		private ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<object>> _caches;
 		#endregion
 
 		#region 构造函数
 		public RedisService()
 		{
+			_address = new IPEndPoint(IPAddress.Loopback, 6379);
 		}
 
 		public RedisService(IPEndPoint address, string password = null, int databaseId = 0)
@@ -60,7 +61,10 @@ namespace Zongsoft.Externals.Redis
 		public RedisService(Configuration.RedisConfigurationElement config)
 		{
 			if(config == null)
-				throw new ArgumentNullException("config");
+			{
+				_address = new IPEndPoint(IPAddress.Loopback, 6379);
+				return;
+			}
 
 			_address = Zongsoft.Communication.IPEndPointConverter.Parse(config.Address);
 			_password = config.Password;
@@ -162,7 +166,7 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 获取集合
-		public IRedisSet GetSet(string name)
+		public IRedisHashset GetHashset(string name)
 		{
 			return this.GetCacheEntry(name, RedisEntryType.Set, (key, redis) => new RedisSet(key, redis));
 		}
@@ -535,12 +539,12 @@ namespace Zongsoft.Externals.Redis
 			return (T)cache.Get(name, key => createThunk(key, redis));
 		}
 
-		private Zongsoft.Common.ObjectCache<object> GetCache()
+		private Zongsoft.Collections.ObjectCache<object> GetCache()
 		{
 			if(_caches == null)
-				System.Threading.Interlocked.CompareExchange(ref _caches, new ConcurrentDictionary<int, Zongsoft.Common.ObjectCache<object>>(), null);
+				System.Threading.Interlocked.CompareExchange(ref _caches, new ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<object>>(), null);
 
-			return _caches.GetOrAdd(this.DatabaseId, new Common.ObjectCache<object>());
+			return _caches.GetOrAdd(this.DatabaseId, new Collections.ObjectCache<object>());
 		}
 		#endregion
 

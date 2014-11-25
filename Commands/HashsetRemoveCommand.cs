@@ -36,7 +36,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public HashsetRemoveCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Remove")
+		public HashsetRemoveCommand(IRedisService redis) : base(redis, "Remove")
 		{
 		}
 		#endregion
@@ -47,10 +47,18 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Arguments.Length < 2)
 				throw new Services.CommandException("Missing arguments.");
 
-			for(int i = 1; i < context.Arguments.Length; i++)
+			var hashset = this.Redis.GetHashset(context.Arguments[0]);
+
+			if(context.Arguments.Length == 2)
 			{
-				this.Redis.RemoveItemFromSet(context.Arguments[0], context.Arguments[i]);
+				hashset.Remove(context.Arguments[1]);
+				return;
 			}
+
+			var items = new string[context.Arguments.Length - 1];
+			Array.Copy(context.Arguments, 1, items, 0, items.Length);
+
+			hashset.RemoveRange(items);
 		}
 		#endregion
 	}

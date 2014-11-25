@@ -26,19 +26,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	[Zongsoft.Services.CommandOption("index", Type = typeof(int), Description = "${Text.ListCommand.Index}")]
-	[Zongsoft.Services.CommandOption("count", Type = typeof(int), DefaultValue = 1, Description = "${Text.ListCommand.Count}")]
-	public class ListGetCommand : RedisCommandBase
+	[Zongsoft.Services.CommandOption("length", Type = typeof(int), DefaultValue = 1)]
+	public class QueueDequeueCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public ListGetCommand() : base("Get")
+		public QueueDequeueCommand() : base("Out")
 		{
 		}
 
-		public ListGetCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Get")
+		public QueueDequeueCommand(IRedisService redis) : base(redis, "Out")
 		{
 		}
 		#endregion
@@ -47,21 +47,29 @@ namespace Zongsoft.Externals.Redis.Commands
 		protected override object OnExecute(Services.CommandContext parameter)
 		{
 			if(parameter.Arguments.Length < 1)
-				throw new Zongsoft.Services.CommandException("Missing arguments.");
+				throw new Services.CommandException("Missing arguments.");
 
-			var index = (int)parameter.Options["index"];
-			int count;
+			var length = (int)parameter.Options["length"];
 
-			if(parameter.Options.TryGetValue<int>("count", out count))
+			if(parameter.Arguments.Length == 1)
+				return this.Redis.GetQueue(parameter.Arguments[0]).Dequeue(length);
+
+			var result = new string[parameter.Arguments.Length * length];
+
+			for(int i = 0; i < parameter.Arguments.Length; i++)
 			{
-				if(count != 1)
+				var queue = this.Redis.GetQueue(parameter.Arguments[i]);
+				var items = queue.Dequeue(length);
+
+				int j = 0;
+
+				foreach(var item in items)
 				{
-					var ends = index >= 0 ? index + count : index - count;
-					return this.Redis.GetRangeFromList(parameter.Arguments[0], index, ends);
+					result[i * parameter.Arguments.Length + j++] = (string)item;
 				}
 			}
 
-			return this.Redis.GetItemFromList(parameter.Arguments[0], index);
+			return result;
 		}
 		#endregion
 	}

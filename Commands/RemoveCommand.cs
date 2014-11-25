@@ -36,7 +36,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public RemoveCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Remove")
+		public RemoveCommand(IRedisService redis) : base(redis, "Remove")
 		{
 		}
 		#endregion
@@ -50,7 +50,7 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(parameter.Arguments.Length == 1)
 				return this.Redis.Remove(parameter.Arguments[0]);
 			else
-				this.Redis.RemoveAll(parameter.Arguments);
+				this.Redis.RemoveRange(parameter.Arguments);
 
 			return true;
 		}

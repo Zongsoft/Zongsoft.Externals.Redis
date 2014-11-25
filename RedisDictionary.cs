@@ -66,7 +66,7 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		public bool IsReadOnly
+		bool ICollection<KeyValuePair<string, string>>.IsReadOnly
 		{
 			get
 			{
@@ -102,7 +102,7 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		public void AddRange(IEnumerable<KeyValuePair<string, string>> items)
+		public void SetRange(IEnumerable<KeyValuePair<string, string>> items)
 		{
 			_redis.SetRangeInHash(_name, items);
 		}
@@ -110,6 +110,11 @@ namespace Zongsoft.Externals.Redis
 		public bool TryAdd(string key, string value)
 		{
 			return _redis.SetEntryInHashIfNotExists(_name, key, value);
+		}
+
+		public IEnumerable<string> GetValues(params string[] keys)
+		{
+			return _redis.GetValuesFromHash(_name, keys);
 		}
 
 		public long Increment(string key, int interval = 1)
@@ -146,7 +151,8 @@ namespace Zongsoft.Externals.Redis
 
 		public void Add(string key, string value)
 		{
-			_redis.SetEntryInHashIfNotExists(_name, key, value);
+			if(!_redis.SetEntryInHashIfNotExists(_name, key, value))
+				throw new RedisException(string.Format("The '{1}' key of entry is existed in the '{0}' dictionary.", _name, key));
 		}
 
 		public bool ContainsKey(string key)
@@ -172,12 +178,15 @@ namespace Zongsoft.Externals.Redis
 
 		void ICollection<KeyValuePair<string, string>>.Add(KeyValuePair<string, string> item)
 		{
-			_redis.SetEntryInHash(_name, item.Key, item.Value);
+			this.Add(item.Key, item.Value);
 		}
 
 		bool ICollection<KeyValuePair<string, string>>.Contains(KeyValuePair<string, string> item)
 		{
-			throw new NotImplementedException();
+			if(item.Key == null)
+				return false;
+
+			return _redis.HashContainsEntry(_name, item.Key);
 		}
 
 		void ICollection<KeyValuePair<string, string>>.CopyTo(KeyValuePair<string, string>[] array, int arrayIndex)
@@ -187,7 +196,10 @@ namespace Zongsoft.Externals.Redis
 
 		bool ICollection<KeyValuePair<string, string>>.Remove(KeyValuePair<string, string> item)
 		{
-			throw new NotImplementedException();
+			if(item.Key == null)
+				return false;
+
+			return _redis.RemoveEntryFromHash(_name, item.Key);
 		}
 
 		public IEnumerator<KeyValuePair<string, string>> GetEnumerator()

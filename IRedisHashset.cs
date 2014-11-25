@@ -29,10 +29,10 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public interface IRedisSet : ICollection<string>
+	public interface IRedisHashset : ICollection<string>
 	{
 		/// <summary>
-		/// 获取当前<seealso cref="IRedisSet"/>哈希集的名称。
+		/// 获取当前<seealso cref="IRedisHashset"/>哈希集的名称。
 		/// </summary>
 		string Name
 		{
@@ -95,6 +95,12 @@ namespace Zongsoft.Externals.Redis
 		/// <param name="item">指定的当前哈希集的成员。</param>
 		/// <returns>如果移动成功返回真(true)，否则返回假(false)。</returns>
 		bool Move(string destination, string item);
+
+		/// <summary>
+		/// 批量添加多个元素到哈希集中。
+		/// </summary>
+		/// <param name="items">指定要批量添加的元素。</param>
+		void AddRange(params string[] items);
 
 		/// <summary>
 		/// 删除指定的多个元素。

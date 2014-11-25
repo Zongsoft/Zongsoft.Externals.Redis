@@ -36,7 +36,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public DictionaryRemoveCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Remove")
+		public DictionaryRemoveCommand(IRedisService redis) : base(redis, "Remove")
 		{
 		}
 		#endregion
@@ -45,11 +45,11 @@ namespace Zongsoft.Externals.Redis.Commands
 		protected override void Run(Services.CommandContext context)
 		{
 			if(context.Arguments.Length < 2)
-				return;
+				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
 			for(int i = 1; i < context.Arguments.Length; i++)
 			{
-				this.Redis.RemoveEntryFromHash(context.Arguments[0], context.Arguments[i]);
+				this.Redis.GetDictionary(context.Arguments[0]).Remove(context.Arguments[i]);
 			}
 		}
 		#endregion

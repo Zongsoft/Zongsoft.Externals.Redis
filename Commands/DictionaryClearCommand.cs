@@ -36,7 +36,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		{
 		}
 
-		public DictionaryClearCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Clear")
+		public DictionaryClearCommand(IRedisService redis) : base(redis, "Clear")
 		{
 		}
 		#endregion
@@ -49,13 +49,13 @@ namespace Zongsoft.Externals.Redis.Commands
 
 			foreach(var arg in parameter.Arguments)
 			{
-				var dictionary = this.Redis.Hashes[arg];
+				var dictionary = this.Redis.GetDictionary(arg);
 
 				if(dictionary != null)
 					dictionary.Clear();
 			}
 
-			this.Redis.RemoveAll(parameter.Arguments);
+			this.Redis.RemoveRange(parameter.Arguments);
 		}
 		#endregion
 	}

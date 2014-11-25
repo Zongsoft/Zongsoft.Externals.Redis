@@ -29,14 +29,14 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class ListClearCommand : RedisCommandBase
+	public class QueueEnqueueCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public ListClearCommand() : base("Clear")
+		public QueueEnqueueCommand() : base("In")
 		{
 		}
 
-		public ListClearCommand(ServiceStack.Redis.IRedisClient redis) : base(redis, "Clear")
+		public QueueEnqueueCommand(IRedisService redis) : base(redis, "In")
 		{
 		}
 		#endregion
@@ -44,15 +44,21 @@ namespace Zongsoft.Externals.Redis.Commands
 		#region 执行方法
 		protected override void Run(Services.CommandContext parameter)
 		{
-			if(parameter.Arguments.Length < 1)
+			if(parameter.Arguments.Length < 2)
 				throw new Services.CommandException("Missing arguments.");
 
-			foreach(var arg in parameter.Arguments)
+			var queue = this.Redis.GetQueue(parameter.Arguments[0]);
+
+			if(parameter.Arguments.Length == 2)
 			{
-				this.Redis.RemoveAllFromList(arg);
+				queue.Enqueue(parameter.Arguments[1]);
+				return;
 			}
 
-			this.Redis.RemoveAll(parameter.Arguments);
+			var items = new string[parameter.Arguments.Length - 1];
+			Array.Copy(parameter.Arguments, 1, items, 0, items.Length);
+
+			queue.Enqueue(items);
 		}
 		#endregion
 	}
