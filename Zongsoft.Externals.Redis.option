@@ -2,6 +2,8 @@
 
 <options>
 	<option path="/Externals/Redis">
-		<default name="localhost" address="127.0.0.1" />
+		<default default.type="Zongsoft.Externals.Redis.Configuration.RedisConfigurationElement, Zongsoft.Externals.Redis"
+		         name="localhost"
+		         address="127.0.0.1" />
 	</option>
 </options>
