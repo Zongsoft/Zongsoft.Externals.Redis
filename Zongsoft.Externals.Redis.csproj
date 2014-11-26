@@ -86,7 +86,7 @@
     <Compile Include="RedisException.cs" />
     <Compile Include="RedisQueue.cs" />
     <Compile Include="RedisService.cs" />
-    <Compile Include="RedisSet.cs" />
+    <Compile Include="RedisHashset.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Zongsoft.Externals.Redis.option" />

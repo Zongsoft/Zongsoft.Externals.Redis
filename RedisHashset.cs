@@ -29,7 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisSet : IRedisHashset
+	public class RedisHashset : IRedisHashset
 	{
 		#region 成员字段
 		private string _name;
@@ -37,7 +37,7 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 构造函数
-		public RedisSet(string name, ServiceStack.Redis.IRedisClient redis)
+		public RedisHashset(string name, ServiceStack.Redis.IRedisClient redis)
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				throw new ArgumentNullException("name");
