@@ -67,6 +67,10 @@ namespace Zongsoft.Externals.Redis
 			}
 
 			_address = Zongsoft.Communication.IPEndPointConverter.Parse(config.Address);
+
+			if(_address.Port == 0)
+				_address.Port = 6379;
+
 			_password = config.Password;
 			_databaseId = config.DbIndex;
 			_timeout = config.Timeout;
@@ -135,10 +139,8 @@ namespace Zongsoft.Externals.Redis
 				return _isDisposed != 0;
 			}
 		}
-		#endregion
 
-		#region 保护属性
-		protected ServiceStack.Redis.IRedisClient RedisClient
+		public ServiceStack.Redis.IRedisClient Proxy
 		{
 			get
 			{
@@ -168,7 +170,7 @@ namespace Zongsoft.Externals.Redis
 		#region 获取集合
 		public IRedisHashset GetHashset(string name)
 		{
-			return this.GetCacheEntry(name, RedisEntryType.Set, (key, redis) => new RedisSet(key, redis));
+			return this.GetCacheEntry(name, RedisEntryType.Set, (key, redis) => new RedisHashset(key, redis));
 		}
 
 		public IRedisDictionary GetDictionary(string name)
@@ -188,7 +190,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.GetEntry(key);
 		}
@@ -199,7 +201,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("keys");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.GetValues(System.Linq.Enumerable.ToList(keys));
 		}
@@ -210,7 +212,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.GetAndSetEntry(key, value);
 		}
@@ -221,7 +223,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			using(var transaction = redis.CreateTransaction())
 			{
@@ -242,7 +244,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			using(var transaction = redis.CreateTransaction())
 			{
@@ -268,7 +270,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			if(requiredNotExists)
 			{
@@ -294,7 +296,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			if(requiredNotExists)
 			{
@@ -320,7 +322,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			//获取Redis条目类型
 			var entryType = redis.GetEntryType(key);
@@ -348,7 +350,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.GetTimeToLive(key);
 		}
@@ -359,7 +361,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.ExpireEntryAt(key, expires);
 		}
@@ -370,7 +372,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.ExpireEntryIn(key, duration);
 		}
@@ -384,7 +386,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("newKey");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			redis.RenameKey(oldKey, newKey);
 		}
@@ -392,7 +394,7 @@ namespace Zongsoft.Externals.Redis
 		public void Clear()
 		{
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			redis.DeleteAll<object>();
 		}
@@ -403,7 +405,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.Remove(key);
 		}
@@ -414,7 +416,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("keys");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			redis.RemoveAll(keys);
 		}
@@ -425,7 +427,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.ContainsKey(key);
 		}
@@ -436,7 +438,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			if(interval < 1)
 			{
@@ -458,7 +460,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("key");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			if(interval < 1)
 			{
@@ -480,7 +482,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("sets");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.GetIntersectFromSets(sets);
 		}
@@ -491,7 +493,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("sets");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			redis.StoreIntersectFromSets(destination, sets);
 		}
@@ -502,7 +504,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("sets");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			return redis.GetUnionFromSets(sets);
 		}
@@ -513,7 +515,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("sets");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			redis.StoreUnionFromSets(destination, sets);
 		}
@@ -525,7 +527,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("name");
 
 			//获取或创建Redis客户端代理对象
-			var redis = this.RedisClient;
+			var redis = this.Proxy;
 
 			//获取指定名称的条目类型
 			var storedEntryType = this.GetEntryType(name);
