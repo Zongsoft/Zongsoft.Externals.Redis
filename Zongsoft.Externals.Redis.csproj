@@ -89,7 +89,9 @@
     <Compile Include="RedisHashset.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Zongsoft.Externals.Redis.option" />
+    <None Include="Zongsoft.Externals.Redis.option">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Zongsoft.Externals.Redis.plugin">
       <SubType>Designer</SubType>
     </None>

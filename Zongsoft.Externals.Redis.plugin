@@ -25,12 +25,18 @@
 	<!-- 将Redis服务对象挂载到默认服务容器中 -->
 	<extension path="/Workspace/Services">
 		<object name="Redis" value="{path:/Workspace/Externals/Redis}" />
+
 		<object name="RedisQueue" type="Zongsoft.Externals.Redis.RedisQueue, Zongsoft.Externals.Redis">
 			<object.constructor>
 				<parameter type="string" value="Zongsoft.Externals.Redis.Queues.Default" />
 				<parameter type="ServiceStack.Redis.IRedisClient, ServiceStack.Interfaces" value="{srv:Redis.Proxy}"/>
 			</object.constructor>
 		</object>
+	</extension>
+
+	<!-- 将队列命令使用的队列对象替换成Redis队列 -->
+	<extension path="/Workbench/Terminal/Commands/Collections">
+		<queue.queue>{srv:RedisQueue}</queue.queue>
 	</extension>
 
 	<!-- 定义Redis命令的根节点 -->
