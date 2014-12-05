@@ -150,9 +150,15 @@ namespace Zongsoft.Externals.Redis
 			if(length < 1)
 				throw new ArgumentOutOfRangeException("length");
 
-			for(int i = 0; i < length; i++)
+			var count = Math.Min(length, this.Count);
+
+			for(int i = 0; i < count; i++)
 			{
 				var result = _redis.RemoveStartFromList(_name);
+
+				//如果Redis队列返回值为空则表示队列已空
+				if(result == null)
+					break;
 
 				//激发“Dequeued”事件
 				this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.CollectionRemovedReason.Remove));
