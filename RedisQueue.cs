@@ -178,17 +178,6 @@ namespace Zongsoft.Externals.Redis
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
-		public void Enqueue(IEnumerable<string> values)
-		{
-			if(values == null)
-				throw new ArgumentNullException("values");
-
-			_redis.AddRangeToList(_name, System.Linq.Enumerable.ToList(values));
-
-			//激发“Enqueued”事件
-			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(values, true));
-		}
-
 		public void Enqueue(object value)
 		{
 			if(value == null)
@@ -200,7 +189,7 @@ namespace Zongsoft.Externals.Redis
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
-		public void Enqueue(IEnumerable values)
+		public void Enqueue<T>(IEnumerable<T> values)
 		{
 			if(values == null)
 				throw new ArgumentNullException("values");
