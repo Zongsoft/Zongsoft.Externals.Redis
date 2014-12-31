@@ -192,7 +192,7 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.GetEntry(key);
+			return redis.GetValue(key);
 		}
 
 		public IEnumerable<string> GetValues(params string[] keys)
@@ -442,7 +442,7 @@ namespace Zongsoft.Externals.Redis
 
 			if(interval < 1)
 			{
-				var text = redis.GetEntry(key);
+				var text = redis.GetValue(key);
 				long result;
 
 				if(long.TryParse(text, out result))
@@ -464,7 +464,7 @@ namespace Zongsoft.Externals.Redis
 
 			if(interval < 1)
 			{
-				var text = redis.GetEntry(key);
+				var text = redis.GetValue(key);
 				long result;
 
 				if(long.TryParse(text, out result))
