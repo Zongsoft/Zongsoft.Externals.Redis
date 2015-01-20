@@ -37,7 +37,7 @@ namespace Zongsoft.Externals.Redis.Configuration
 		#region 常量定义
 		private const string XML_NAME_ATTRIBUTE = "name";
 		private const string XML_ADDRESS_ATTRIBUTE = "address";
-		private const string XML_DB_ATTRIBUTE = "db";
+		private const string XML_DATABASEID_ATTRIBUTE = "databaseId";
 		private const string XML_PASSWORD_ATTRIBUTE = "password";
 		private const string XML_TIMEOUT_ATTRIBUTE = "timeout";
 		#endregion
@@ -75,19 +75,19 @@ namespace Zongsoft.Externals.Redis.Configuration
 			}
 		}
 
-		[OptionConfigurationProperty(XML_DB_ATTRIBUTE, DefaultValue = 0)]
-		public int DbIndex
+		[OptionConfigurationProperty(XML_DATABASEID_ATTRIBUTE, DefaultValue = 0)]
+		public int DatabaseId
 		{
 			get
 			{
-				return (int)this[XML_DB_ATTRIBUTE];
+				return (int)this[XML_DATABASEID_ATTRIBUTE];
 			}
 			set
 			{
 				if(value < 0)
 					throw new ArgumentOutOfRangeException();
 
-				this[XML_DB_ATTRIBUTE] = value;
+				this[XML_DATABASEID_ATTRIBUTE] = value;
 			}
 		}
 

@@ -36,11 +36,10 @@ namespace Zongsoft.Externals.Redis
 	public class RedisService : IRedisService, IDisposable, Zongsoft.Collections.IQueueProvider
 	{
 		#region 成员字段
-		private ServiceStack.Redis.RedisClient _redis;
+		private Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient> _redisReference;
 		private IPEndPoint _address;
 		private string _password;
 		private int _databaseId;
-		private int _isDisposed;
 		private TimeSpan _timeout;
 		private ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<object>> _caches;
 		#endregion
@@ -49,6 +48,7 @@ namespace Zongsoft.Externals.Redis
 		public RedisService()
 		{
 			_address = new IPEndPoint(IPAddress.Loopback, 6379);
+			_redisReference = new Zongsoft.Common.ObjectReference<ServiceStack.Redis.IRedisClient>(this.CreateProxy);
 		}
 
 		public RedisService(IPEndPoint address, string password = null, int databaseId = 0)
@@ -56,6 +56,7 @@ namespace Zongsoft.Externals.Redis
 			_address = address;
 			_password = password;
 			_databaseId = databaseId;
+			_redisReference = new Zongsoft.Common.ObjectReference<ServiceStack.Redis.IRedisClient>(this.CreateProxy);
 		}
 
 		public RedisService(Configuration.RedisConfigurationElement config)
@@ -72,8 +73,9 @@ namespace Zongsoft.Externals.Redis
 				_address.Port = 6379;
 
 			_password = config.Password;
-			_databaseId = config.DbIndex;
+			_databaseId = config.DatabaseId;
 			_timeout = config.Timeout;
+			_redisReference = new Zongsoft.Common.ObjectReference<ServiceStack.Redis.IRedisClient>(this.CreateProxy);
 		}
 		#endregion
 
@@ -89,9 +91,6 @@ namespace Zongsoft.Externals.Redis
 				if(_address == value)
 					return;
 
-				if(_redis != null)
-					throw new InvalidOperationException();
-
 				_address = value;
 			}
 		}
@@ -100,9 +99,6 @@ namespace Zongsoft.Externals.Redis
 		{
 			set
 			{
-				if(_redis != null)
-					throw new InvalidOperationException();
-
 				_password = value;
 			}
 		}
@@ -136,7 +132,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return _isDisposed != 0;
+				return _redisReference == null;
 			}
 		}
 
@@ -144,25 +140,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				if(_isDisposed != 0)
-					throw new ObjectDisposedException("Redis");
-
-				if(_redis == null)
-				{
-					if(_isDisposed != 0)
-						throw new ObjectDisposedException("Redis");
-
-					System.Threading.Interlocked.CompareExchange(ref _redis, new ServiceStack.Redis.RedisClient(_address.Address.ToString(), _address.Port, _password, _databaseId), null);
-
-					if(_timeout > TimeSpan.Zero)
-					{
-						_redis.ConnectTimeout = (int)_timeout.TotalMilliseconds;
-						_redis.RetryTimeout = (int)_timeout.TotalMilliseconds;
-						_redis.SendTimeout = (int)_timeout.TotalMilliseconds;
-					}
-				}
-
-				return _redis;
+				return _redisReference.Target;
 			}
 		}
 		#endregion
@@ -520,8 +498,47 @@ namespace Zongsoft.Externals.Redis
 			redis.StoreUnionFromSets(destination, sets);
 		}
 
+		/// <summary>
+		/// 刷新当前Redis服务，当与远程Redis服务器连接中断后可使用该方法手动连接。
+		/// </summary>
+		/// <param name="timeout">刷新的超时，如果为零则表示无超时限制。</param>
+		public virtual void Refresh(TimeSpan timeout)
+		{
+			var reference = _redisReference;
+
+			if(reference == null)
+				throw new ObjectDisposedException("Redis");
+
+			if(reference.HasTarget)
+			{
+				var redis = _redisReference.Target;
+				redis.Shutdown();
+			}
+
+			reference.Invalidate();
+		}
+
+		#region 虚拟方法
+		protected virtual ServiceStack.Redis.IRedisClient CreateProxy()
+		{
+			if(_redisReference == null)
+				throw new ObjectDisposedException("Redis");
+
+			var redis = new ServiceStack.Redis.RedisClient(_address.Address.ToString(), _address.Port, _password, _databaseId);
+
+			if(_timeout > TimeSpan.Zero)
+			{
+				redis.ConnectTimeout = (int)_timeout.TotalMilliseconds;
+				redis.RetryTimeout = (int)_timeout.TotalMilliseconds;
+				redis.SendTimeout = (int)_timeout.TotalMilliseconds;
+			}
+
+			return redis;
+		}
+		#endregion
+
 		#region 私有方法
-		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, ServiceStack.Redis.IRedisClient, T> createThunk)
+		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient>, T> createThunk)
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				throw new ArgumentNullException("name");
@@ -538,7 +555,7 @@ namespace Zongsoft.Externals.Redis
 			//获取当前数据库的缓存器
 			var cache = this.GetCache();
 
-			return (T)cache.Get(name, key => createThunk(key, redis));
+			return (T)cache.Get(name, key => createThunk(key, _redisReference));
 		}
 
 		private Zongsoft.Collections.ObjectCache<object> GetCache()
@@ -553,15 +570,12 @@ namespace Zongsoft.Externals.Redis
 		#region 处置方法
 		public void Dispose()
 		{
-			var isDisposed = System.Threading.Interlocked.Exchange(ref _isDisposed, 1);
+			var redisReference = _redisReference as IDisposable;
 
-			if(isDisposed != 0)
-				return;
+			if(redisReference != null)
+				redisReference.Dispose();
 
-			var redis = System.Threading.Interlocked.Exchange(ref _redis, null);
-
-			if(redis != null)
-				redis.Dispose();
+			_redisReference = null;
 		}
 		#endregion
 

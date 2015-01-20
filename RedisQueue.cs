@@ -32,69 +32,24 @@ using System.Text;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisQueue : IRedisQueue, Zongsoft.Collections.IQueue
+	public class RedisQueue : RedisObjectBase, IRedisQueue
 	{
 		#region 事件定义
 		public event EventHandler<Zongsoft.Collections.DequeuedEventArgs> Dequeued;
 		public event EventHandler<Zongsoft.Collections.EnqueuedEventArgs> Enqueued;
 		#endregion
 
-		#region 成员字段
-		private string _name;
-		private ServiceStack.Redis.IRedisClient _redis;
-		#endregion
-
 		#region 构造函数
-		public RedisQueue(string name, ServiceStack.Redis.IRedisClient redis)
+		public RedisQueue(string name, ServiceStack.Redis.IRedisClient redis) : base(name, redis)
 		{
-			if(string.IsNullOrWhiteSpace(name))
-				throw new ArgumentNullException("name");
+		}
 
-			if(redis == null)
-				throw new ArgumentNullException("redis");
-
-			_name = name.Trim();
-			_redis = redis;
+		public RedisQueue(string name, Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient> redisReference) : base(name, redisReference)
+		{
 		}
 		#endregion
 
 		#region 公共属性
-		/// <summary>
-		/// 获取或设置队列的名称。
-		/// </summary>
-		public string Name
-		{
-			get
-			{
-				return _name;
-			}
-			set
-			{
-				if(string.IsNullOrWhiteSpace(value))
-					throw new ArgumentNullException();
-
-				_name = value.Trim();
-			}
-		}
-
-		/// <summary>
-		/// 获取或设置本队列所依附的<seealso cref="ServiceStack.Redis.IRedisClient"/>对象。
-		/// </summary>
-		public ServiceStack.Redis.IRedisClient Redis
-		{
-			get
-			{
-				return _redis;
-			}
-			set
-			{
-				if(value == null)
-					throw new ArgumentNullException();
-
-				_redis = value;
-			}
-		}
-
 		public int Capacity
 		{
 			get
@@ -107,7 +62,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return (int)_redis.GetListCount(_name);
+				return (int)this.Redis.GetListCount(this.Name);
 			}
 		}
 
@@ -132,12 +87,12 @@ namespace Zongsoft.Externals.Redis
 		#region 公共方法
 		public void Clear()
 		{
-			_redis.RemoveAllFromList(_name);
+			this.Redis.RemoveAllFromList(this.Name);
 		}
 
 		public object Dequeue()
 		{
-			var result = _redis.RemoveStartFromList(_name);
+			var result = this.Redis.RemoveStartFromList(this.Name);
 
 			//激发“Dequeued”事件
 			this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.CollectionRemovedReason.Remove));
@@ -154,7 +109,7 @@ namespace Zongsoft.Externals.Redis
 
 			for(int i = 0; i < count; i++)
 			{
-				var result = _redis.RemoveStartFromList(_name);
+				var result = this.Redis.RemoveStartFromList(this.Name);
 
 				//如果Redis队列返回值为空则表示队列已空
 				if(result == null)
@@ -172,7 +127,7 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				throw new ArgumentNullException("value");
 
-			_redis.AddItemToList(_name, value);
+			this.Redis.AddItemToList(this.Name, value);
 
 			//激发“Enqueued”事件
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
@@ -183,7 +138,7 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				throw new ArgumentNullException("value");
 
-			_redis.AddItemToList(_name, this.ConvertValue(value));
+			this.Redis.AddItemToList(this.Name, this.ConvertValue(value));
 
 			//激发“Enqueued”事件
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
@@ -204,7 +159,7 @@ namespace Zongsoft.Externals.Redis
 				list.Add(this.ConvertValue(value));
 			}
 
-			_redis.AddRangeToList(_name, list);
+			this.Redis.AddRangeToList(this.Name, list);
 
 			//激发“Enqueued”事件
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(list, true));
@@ -215,25 +170,25 @@ namespace Zongsoft.Externals.Redis
 			if(length < 1)
 				throw new ArgumentOutOfRangeException("length");
 
-			return _redis.GetRangeFromList(_name, 0, length - 1);
+			return this.Redis.GetRangeFromList(this.Name, 0, length - 1);
 		}
 
 		public object Peek()
 		{
-			return _redis.GetItemFromList(_name, 0);
+			return this.Redis.GetItemFromList(this.Name, 0);
 		}
 
 		public IEnumerable Take(int index, int length)
 		{
 			if(length > 0)
-				return _redis.GetRangeFromList(_name, index, index + length);
+				return this.Redis.GetRangeFromList(this.Name, index, index + length);
 			else
-				return _redis.GetRangeFromList(_name, index, -1);
+				return this.Redis.GetRangeFromList(this.Name, index, -1);
 		}
 
 		public object Take(int index)
 		{
-			return _redis.GetItemFromList(_name, index);
+			return this.Redis.GetItemFromList(this.Name, index);
 		}
 
 		public void CopyTo(Array array, int index)
@@ -241,7 +196,7 @@ namespace Zongsoft.Externals.Redis
 			if(index < 0)
 				throw new ArgumentOutOfRangeException("index");
 
-			var items = _redis.GetRangeFromList(_name, index, index + array.Length);
+			var items = this.Redis.GetRangeFromList(this.Name, index, index + array.Length);
 			Array.Copy(items.ToArray(), array, array.Length);
 		}
 		#endregion
@@ -270,7 +225,7 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				return null;
 
-			if(value == typeof(string))
+			if(value.GetType() == typeof(string))
 				return (string)value;
 
 			if(value.GetType().IsPrimitive || value.GetType().IsEnum || value is StringBuilder)
@@ -305,7 +260,7 @@ namespace Zongsoft.Externals.Redis
 
 			for(int i = 0; i < count; i++)
 			{
-				var result = _redis.GetItemFromList(_name, i);
+				var result = this.Redis.GetItemFromList(this.Name, i);
 
 				if(result != null)
 					yield return result;

@@ -38,5 +38,11 @@ namespace Zongsoft.Externals.Redis
 		{
 			get;
 		}
+
+		/// <summary>
+		/// 刷新当前队列，当与远程Redis服务器连接中断后可使用该方法手动连接。
+		/// </summary>
+		/// <param name="timeout">刷新的超时，如果为零则表示无超时限制。</param>
+		void Refresh(TimeSpan timeout);
 	}
 }

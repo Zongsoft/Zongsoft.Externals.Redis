@@ -40,6 +40,12 @@ namespace Zongsoft.Externals.Redis
 		}
 
 		/// <summary>
+		/// 刷新当前哈希集，当与远程Redis服务器连接中断后可使用该方法手动连接。
+		/// </summary>
+		/// <param name="timeout">刷新的超时，如果为零则表示无超时限制。</param>
+		void Refresh(TimeSpan timeout);
+
+		/// <summary>
 		/// 返回当前哈希集与所有给定哈希集之间的差集。
 		/// </summary>
 		/// <param name="other">指定的其他哈希集的名称数组。</param>

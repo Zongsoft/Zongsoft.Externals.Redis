@@ -29,40 +29,23 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisHashset : IRedisHashset
+	public class RedisHashset : RedisObjectBase, IRedisHashset
 	{
-		#region 成员字段
-		private string _name;
-		private ServiceStack.Redis.IRedisClient _redis;
-		#endregion
-
 		#region 构造函数
-		public RedisHashset(string name, ServiceStack.Redis.IRedisClient redis)
+		public RedisHashset(string name, ServiceStack.Redis.IRedisClient redis) : base(name, redis)
 		{
-			if(string.IsNullOrWhiteSpace(name))
-				throw new ArgumentNullException("name");
+		}
 
-			if(redis == null)
-				throw new ArgumentNullException("redis");
-
-			_name = name.Trim();
-			_redis = redis;
+		public RedisHashset(string name, Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient> redisReference) : base(name, redisReference)
+		{
 		}
 		#endregion
-
-		public string Name
-		{
-			get
-			{
-				return _name;
-			}
-		}
 
 		public int Count
 		{
 			get
 			{
-				return (int)_redis.GetSetCount(_name);
+				return (int)this.Redis.GetSetCount(this.Name);
 			}
 		}
 
@@ -76,48 +59,48 @@ namespace Zongsoft.Externals.Redis
 
 		public HashSet<string> GetExcept(params string[] other)
 		{
-			return _redis.GetDifferencesFromSet(_name, other);
+			return this.Redis.GetDifferencesFromSet(this.Name, other);
 		}
 
 		public void SetExcept(string destination, params string[] other)
 		{
-			_redis.StoreDifferencesFromSet(destination, _name, other);
+			this.Redis.StoreDifferencesFromSet(destination, this.Name, other);
 		}
 
 		public HashSet<string> GetIntersect(params string[] other)
 		{
 			var sets = new string[other.Length + 1];
-			sets[0] = _name;
+			sets[0] = this.Name;
 			Array.Copy(other, 0, sets, 1, other.Length);
 
-			return _redis.GetIntersectFromSets(sets);
+			return this.Redis.GetIntersectFromSets(sets);
 		}
 
 		public void SetIntersect(string destination, params string[] other)
 		{
 			var sets = new string[other.Length + 1];
-			sets[0] = _name;
+			sets[0] = this.Name;
 			Array.Copy(other, 0, sets, 1, other.Length);
 
-			_redis.StoreIntersectFromSets(destination, sets);
+			this.Redis.StoreIntersectFromSets(destination, sets);
 		}
 
 		public HashSet<string> GetUnion(params string[] other)
 		{
 			var sets = new string[other.Length + 1];
-			sets[0] = _name;
+			sets[0] = this.Name;
 			Array.Copy(other, 0, sets, 1, other.Length);
 
-			return _redis.GetUnionFromSets(sets);
+			return this.Redis.GetUnionFromSets(sets);
 		}
 
 		public void SetUnion(string destination, params string[] other)
 		{
 			var sets = new string[other.Length + 1];
-			sets[0] = _name;
+			sets[0] = this.Name;
 			Array.Copy(other, 0, sets, 1, other.Length);
 
-			_redis.StoreUnionFromSets(destination, sets);
+			this.Redis.StoreUnionFromSets(destination, sets);
 		}
 
 		public HashSet<string> GetRandomValues(int count)
@@ -126,7 +109,7 @@ namespace Zongsoft.Externals.Redis
 
 			for(int i = 0; i < Math.Max(1, count); i++)
 			{
-				result.Add(_redis.GetRandomItemFromSet(_name));
+				result.Add(this.Redis.GetRandomItemFromSet(this.Name));
 			}
 
 			return result;
@@ -134,17 +117,17 @@ namespace Zongsoft.Externals.Redis
 
 		public bool Move(string destination, string item)
 		{
-			_redis.MoveBetweenSets(_name, destination, item);
+			this.Redis.MoveBetweenSets(this.Name, destination, item);
 			return true;
 		}
 
 		public void RemoveRange(params string[] items)
 		{
-			using(var transaction = _redis.CreateTransaction())
+			using(var transaction = this.Redis.CreateTransaction())
 			{
 				foreach(var item in items)
 				{
-					transaction.QueueCommand(proxy => proxy.RemoveEntryFromHash(_name, item));
+					transaction.QueueCommand(proxy => proxy.RemoveEntryFromHash(this.Name, item));
 				}
 
 				transaction.Commit();
@@ -153,28 +136,28 @@ namespace Zongsoft.Externals.Redis
 
 		public bool Remove(string item)
 		{
-			_redis.RemoveItemFromSet(_name, item);
+			this.Redis.RemoveItemFromSet(this.Name, item);
 			return true;
 		}
 
 		public void Add(string item)
 		{
-			_redis.AddItemToSet(_name, item);
+			this.Redis.AddItemToSet(this.Name, item);
 		}
 
 		public void AddRange(params string[] items)
 		{
-			_redis.AddRangeToSet(_name, System.Linq.Enumerable.ToList(items));
+			this.Redis.AddRangeToSet(this.Name, System.Linq.Enumerable.ToList(items));
 		}
 
 		public void Clear()
 		{
-			_redis.Remove(_name);
+			this.Redis.Remove(this.Name);
 		}
 
 		public bool Contains(string item)
 		{
-			return _redis.SetContainsItem(_name, item);
+			return this.Redis.SetContainsItem(this.Name, item);
 		}
 
 		void ICollection<string>.CopyTo(string[] array, int arrayIndex)
@@ -184,7 +167,7 @@ namespace Zongsoft.Externals.Redis
 
 		public IEnumerator<string> GetEnumerator()
 		{
-			var items = _redis.GetAllItemsFromSet(_name);
+			var items = this.Redis.GetAllItemsFromSet(this.Name);
 
 			foreach(var item in items)
 			{
