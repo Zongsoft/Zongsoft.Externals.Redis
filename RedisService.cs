@@ -33,7 +33,7 @@ using ServiceStack.Redis;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisService : IRedisService, IDisposable, Zongsoft.Collections.IQueueProvider
+	public class RedisService : MarshalByRefObject, IRedisService, IDisposable, Zongsoft.Collections.IQueueProvider
 	{
 		#region 成员字段
 		private Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient> _redisReference;
@@ -509,12 +509,6 @@ namespace Zongsoft.Externals.Redis
 			if(reference == null)
 				throw new ObjectDisposedException("Redis");
 
-			if(reference.HasTarget)
-			{
-				var redis = _redisReference.Target;
-				redis.Shutdown();
-			}
-
 			reference.Invalidate();
 		}
 
@@ -570,6 +564,11 @@ namespace Zongsoft.Externals.Redis
 		#region 处置方法
 		public void Dispose()
 		{
+			var caches = _caches;
+
+			if(caches != null)
+				caches.Clear();
+
 			var redisReference = _redisReference as IDisposable;
 
 			if(redisReference != null)

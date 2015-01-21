@@ -149,14 +149,24 @@ namespace Zongsoft.Externals.Redis
 			if(values == null)
 				throw new ArgumentNullException("values");
 
-			var list = new List<string>();
+			List<string> list = values as List<string>;
 
-			foreach(var value in values)
+			if(list == null)
 			{
-				if(value == null)
-					continue;
+				if(typeof(T) == typeof(string))
+				{
+					list = new List<string>((IEnumerable<string>)values);
+				}
+				else
+				{
+					foreach(var value in values)
+					{
+						if(value == null)
+							continue;
 
-				list.Add(this.ConvertValue(value));
+						list.Add(this.ConvertValue(value));
+					}
+				}
 			}
 
 			this.Redis.AddRangeToList(this.Name, list);

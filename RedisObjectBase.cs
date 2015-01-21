@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public abstract class RedisObjectBase
+	public abstract class RedisObjectBase : MarshalByRefObject
 	{
 		#region 成员字段
 		private string _name;
@@ -90,10 +90,6 @@ namespace Zongsoft.Externals.Redis
 		/// <param name="timeout">刷新的超时，如果为零则表示无超时限制。</param>
 		public virtual void Refresh(TimeSpan timeout)
 		{
-			var redis = this.Redis;
-
-			redis.Shutdown();
-
 			if(_redisReference != null)
 				_redisReference.Invalidate();
 		}
