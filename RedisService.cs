@@ -543,7 +543,7 @@ namespace Zongsoft.Externals.Redis
 			//获取指定名称的条目类型
 			var storedEntryType = this.GetEntryType(name);
 
-			if(storedEntryType != RedisEntryType.None || storedEntryType != entryType)
+			if(storedEntryType != RedisEntryType.None && storedEntryType != entryType)
 				throw new RedisException("The specified name entry is invalid entry.");
 
 			//获取当前数据库的缓存器
