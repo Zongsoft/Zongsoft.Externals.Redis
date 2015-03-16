@@ -58,12 +58,6 @@ namespace Zongsoft.Externals.Redis
 		IRedisQueue GetQueue(string name);
 		#endregion
 
-		/// <summary>
-		/// 刷新当前Redis服务，当与远程Redis服务器连接中断后可使用该方法手动连接。
-		/// </summary>
-		/// <param name="timeout">刷新的超时，如果为零则表示无超时限制。</param>
-		void Refresh(TimeSpan timeout);
-
 		string GetValue(string key);
 		IEnumerable<string> GetValues(params string[] keys);
 

@@ -40,12 +40,6 @@ namespace Zongsoft.Externals.Redis
 		}
 
 		/// <summary>
-		/// 刷新当前字典，当与远程Redis服务器连接中断后可使用该方法手动连接。
-		/// </summary>
-		/// <param name="timeout">刷新的超时，如果为零则表示无超时限制。</param>
-		void Refresh(TimeSpan timeout);
-
-		/// <summary>
 		/// 批量设置指定的键值对集合到字典中，如果指定键值对的键已存在则覆盖保存。
 		/// </summary>
 		/// <param name="items">指定的要批量设置的键值对集。</param>
