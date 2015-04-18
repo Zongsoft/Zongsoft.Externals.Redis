@@ -40,11 +40,7 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 构造函数
-		public RedisQueue(string name, ServiceStack.Redis.IRedisClient redis) : base(name, redis)
-		{
-		}
-
-		public RedisQueue(string name, Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient> redisReference) : base(name, redisReference)
+		public RedisQueue(string name, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> redisPool) : base(name, redisPool)
 		{
 		}
 		#endregion
@@ -62,7 +58,16 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return (int)this.Redis.GetListCount(this.Name);
+				var redis = this.Redis;
+
+				try
+				{
+					return (int)redis.GetListCount(this.Name);
+				}
+				finally
+				{
+					this.RedisPool.Release(redis);
+				}
 			}
 		}
 
@@ -87,15 +92,35 @@ namespace Zongsoft.Externals.Redis
 		#region 公共方法
 		public void Clear()
 		{
-			this.Redis.RemoveAllFromList(this.Name);
+			var redis = this.Redis;
+
+			try
+			{
+				redis.RemoveAllFromList(this.Name);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public object Dequeue()
 		{
-			var result = this.Redis.RemoveStartFromList(this.Name);
+			var redis = this.Redis;
+			string result = null;
+
+			try
+			{
+				result = redis.RemoveStartFromList(this.Name);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 
 			//激发“Dequeued”事件
-			this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.CollectionRemovedReason.Remove));
+			if(result != null)
+				this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.CollectionRemovedReason.Remove));
 
 			return result;
 		}
@@ -106,19 +131,27 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentOutOfRangeException("length");
 
 			var count = Math.Min(length, this.Count);
+			var redis = this.Redis;
 
-			for(int i = 0; i < count; i++)
+			try
 			{
-				var result = this.Redis.RemoveStartFromList(this.Name);
+				for(int i = 0; i < count; i++)
+				{
+					var result = redis.RemoveStartFromList(this.Name);
 
-				//如果Redis队列返回值为空则表示队列已空
-				if(result == null)
-					break;
+					//如果Redis队列返回值为空则表示队列已空
+					if(result == null)
+						break;
 
-				//激发“Dequeued”事件
-				this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.CollectionRemovedReason.Remove));
+					//激发“Dequeued”事件
+					this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result, false, Collections.CollectionRemovedReason.Remove));
 
-				yield return result;
+					yield return result;
+				}
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
 			}
 		}
 
@@ -127,7 +160,16 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				throw new ArgumentNullException("value");
 
-			this.Redis.AddItemToList(this.Name, value);
+			var redis = this.Redis;
+
+			try
+			{
+				redis.AddItemToList(this.Name, value);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 
 			//激发“Enqueued”事件
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
@@ -138,7 +180,16 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				throw new ArgumentNullException("value");
 
-			this.Redis.AddItemToList(this.Name, this.ConvertValue(value));
+			var redis = this.Redis;
+
+			try
+			{
+				redis.AddItemToList(this.Name, this.ConvertValue(value));
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 
 			//激发“Enqueued”事件
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
@@ -169,7 +220,16 @@ namespace Zongsoft.Externals.Redis
 				}
 			}
 
-			this.Redis.AddRangeToList(this.Name, list);
+			var redis = this.Redis;
+
+			try
+			{
+				redis.AddRangeToList(this.Name, list);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 
 			//激发“Enqueued”事件
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(list, true));
@@ -180,25 +240,61 @@ namespace Zongsoft.Externals.Redis
 			if(length < 1)
 				throw new ArgumentOutOfRangeException("length");
 
-			return this.Redis.GetRangeFromList(this.Name, 0, length - 1);
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.GetRangeFromList(this.Name, 0, length - 1);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public object Peek()
 		{
-			return this.Redis.GetItemFromList(this.Name, 0);
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.GetItemFromList(this.Name, 0);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public IEnumerable Take(int index, int length)
 		{
-			if(length > 0)
-				return this.Redis.GetRangeFromList(this.Name, index, index + length);
-			else
-				return this.Redis.GetRangeFromList(this.Name, index, -1);
+			var redis = this.Redis;
+
+			try
+			{
+				if(length > 0)
+					return redis.GetRangeFromList(this.Name, index, index + length);
+				else
+					return redis.GetRangeFromList(this.Name, index, -1);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public object Take(int index)
 		{
-			return this.Redis.GetItemFromList(this.Name, index);
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.GetItemFromList(this.Name, index);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public void CopyTo(Array array, int index)
@@ -206,7 +302,18 @@ namespace Zongsoft.Externals.Redis
 			if(index < 0)
 				throw new ArgumentOutOfRangeException("index");
 
-			var items = this.Redis.GetRangeFromList(this.Name, index, index + array.Length);
+			var redis = this.Redis;
+			List<string> items = null;
+
+			try
+			{
+				items = redis.GetRangeFromList(this.Name, index, index + array.Length);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
+
 			Array.Copy(items.ToArray(), array, array.Length);
 		}
 		#endregion
@@ -267,13 +374,21 @@ namespace Zongsoft.Externals.Redis
 		public System.Collections.IEnumerator GetEnumerator()
 		{
 			var count = this.Count;
+			var redis = this.Redis;
 
-			for(int i = 0; i < count; i++)
+			try
 			{
-				var result = this.Redis.GetItemFromList(this.Name, i);
+				for(int i = 0; i < count; i++)
+				{
+					var result = redis.GetItemFromList(this.Name, i);
 
-				if(result != null)
-					yield return result;
+					if(result != null)
+						yield return result;
+				}
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
 			}
 		}
 		#endregion

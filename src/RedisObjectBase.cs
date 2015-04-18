@@ -7,39 +7,26 @@ namespace Zongsoft.Externals.Redis
 	{
 		#region 成员字段
 		private string _name;
-		private ServiceStack.Redis.IRedisClient _redis;
-		private Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient> _redisReference;
+		private Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> _redisPool;
 		#endregion
 
 		#region 构造函数
-		protected RedisObjectBase(string name, ServiceStack.Redis.IRedisClient redis)
+		protected RedisObjectBase(string name, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> redisPool)
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				throw new ArgumentNullException("name");
 
-			if(redis == null)
-				throw new ArgumentNullException("redis");
+			if(redisPool == null)
+				throw new ArgumentNullException("redisPool");
 
 			_name = name.Trim();
-			_redis = redis;
-		}
-
-		protected RedisObjectBase(string name, Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient> redisReference)
-		{
-			if(string.IsNullOrWhiteSpace(name))
-				throw new ArgumentNullException("name");
-
-			if(redisReference == null)
-				throw new ArgumentNullException("redisReference");
-
-			_name = name.Trim();
-			_redisReference = redisReference;
+			_redisPool = redisPool;
 		}
 		#endregion
 
 		#region 公共属性
 		/// <summary>
-		/// 获取或设置队列的名称。
+		/// 获取或设置Redis对象的名称。
 		/// </summary>
 		public string Name
 		{
@@ -63,22 +50,17 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				if(_redis != null)
-					return _redis;
-
-				var result = _redisReference == null ? null : _redisReference.Target;
-
-				if(result == null)
-					throw new ObjectDisposedException("Redis");
-
-				return result;
+				return _redisPool.GetObject();
 			}
-			set
-			{
-				if(value == null)
-					throw new ArgumentNullException();
+		}
+		#endregion
 
-				_redis = value;
+		#region 保护属性
+		protected Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> RedisPool
+		{
+			get
+			{
+				return _redisPool;
 			}
 		}
 		#endregion

@@ -32,20 +32,26 @@ namespace Zongsoft.Externals.Redis
 	public class RedisDictionary : RedisObjectBase, IRedisDictionary
 	{
 		#region 构造函数
-		public RedisDictionary(string name, ServiceStack.Redis.IRedisClient redis) : base(name, redis)
-		{
-		}
-
-		public RedisDictionary(string name, Zongsoft.Common.IObjectReference<ServiceStack.Redis.IRedisClient> redisReference) : base(name, redisReference)
+		public RedisDictionary(string name, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> redisPool) : base(name, redisPool)
 		{
 		}
 		#endregion
 
+		#region 公共属性
 		public int Count
 		{
 			get
 			{
-				return (int)this.Redis.GetHashCount(this.Name);
+				var redis = this.Redis;
+
+				try
+				{
+					return (int)redis.GetHashCount(this.Name);
+				}
+				finally
+				{
+					this.RedisPool.Release(redis);
+				}
 			}
 		}
 
@@ -61,11 +67,29 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Redis.GetValueFromHash(this.Name, key);
+				var redis = this.Redis;
+
+				try
+				{
+					return redis.GetValueFromHash(this.Name, key);
+				}
+				finally
+				{
+					this.RedisPool.Release(redis);
+				}
 			}
 			set
 			{
-				this.Redis.SetEntryInHash(this.Name, key, value);
+				var redis = this.Redis;
+
+				try
+				{
+					redis.SetEntryInHash(this.Name, key, value);
+				}
+				finally
+				{
+					this.RedisPool.Release(redis);
+				}
 			}
 		}
 
@@ -73,7 +97,16 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Redis.GetHashKeys(this.Name);
+				var redis = this.Redis;
+
+				try
+				{
+					return redis.GetHashKeys(this.Name);
+				}
+				finally
+				{
+					this.RedisPool.Release(redis);
+				}
 			}
 		}
 
@@ -81,84 +114,165 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Redis.GetHashValues(this.Name);
+				var redis = this.Redis;
+
+				try
+				{
+					return redis.GetHashValues(this.Name);
+				}
+				finally
+				{
+					this.RedisPool.Release(redis);
+				}
 			}
 		}
+		#endregion
 
+		#region 公共方法
 		public void SetRange(IEnumerable<KeyValuePair<string, string>> items)
 		{
-			this.Redis.SetRangeInHash(this.Name, items);
+			var redis = this.Redis;
+
+			try
+			{
+				redis.SetRangeInHash(this.Name, items);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public bool TryAdd(string key, string value)
 		{
-			return this.Redis.SetEntryInHashIfNotExists(this.Name, key, value);
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.SetEntryInHashIfNotExists(this.Name, key, value);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public IEnumerable<string> GetValues(params string[] keys)
 		{
-			return this.Redis.GetValuesFromHash(this.Name, keys);
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.GetValuesFromHash(this.Name, keys);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public long Increment(string key, int interval = 1)
 		{
-			if(interval < 1)
+			var redis = this.Redis;
+
+			try
 			{
-				var text = this.Redis.GetValueFromHash(this.Name, key);
-				long result;
-
-				if(long.TryParse(text, out result))
-					return result;
-				else
-					return -1;
+				return redis.IncrementValueInHash(this.Name, key, interval);
 			}
-
-			return this.Redis.IncrementValueInHash(this.Name, key, interval);
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public long Decrement(string key, int interval = 1)
 		{
-			if(interval < 1)
+			var redis = this.Redis;
+
+			try
 			{
-				var text = this.Redis.GetValueFromHash(this.Name, key);
-				long result;
-
-				if(long.TryParse(text, out result))
-					return result;
-				else
-					return -1;
+				return redis.IncrementValueInHash(this.Name, key, -interval);
 			}
-
-			return this.Redis.IncrementValueInHash(this.Name, key, -interval);
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public void Add(string key, string value)
 		{
-			if(!this.Redis.SetEntryInHashIfNotExists(this.Name, key, value))
-				throw new RedisException(string.Format("The '{1}' key of entry is existed in the '{0}' dictionary.", this.Name, key));
+			var redis = this.Redis;
+
+			try
+			{
+				if(!redis.SetEntryInHashIfNotExists(this.Name, key, value))
+					throw new RedisException(string.Format("The '{1}' key of entry is existed in the '{0}' dictionary.", this.Name, key));
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public bool ContainsKey(string key)
 		{
-			return this.Redis.HashContainsEntry(this.Name, key);
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.HashContainsEntry(this.Name, key);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public bool Remove(string key)
 		{
-			return this.Redis.RemoveEntryFromHash(this.Name, key);
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.RemoveEntryFromHash(this.Name, key);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public bool TryGetValue(string key, out string value)
 		{
-			value = this.Redis.GetValueFromHash(this.Name, key);
-			return value != null;
+			var redis = this.Redis;
+
+			try
+			{
+				value = redis.GetValueFromHash(this.Name, key);
+				return value != null;
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 
 		public void Clear()
 		{
-			this.Redis.Remove(this.Name);
-		}
+			var redis = this.Redis;
 
+			try
+			{
+				redis.Remove(this.Name);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
+		}
+		#endregion
+
+		#region 显式实现
 		void ICollection<KeyValuePair<string, string>>.Add(KeyValuePair<string, string> item)
 		{
 			this.Add(item.Key, item.Value);
@@ -169,7 +283,7 @@ namespace Zongsoft.Externals.Redis
 			if(item.Key == null)
 				return false;
 
-			return this.Redis.HashContainsEntry(this.Name, item.Key);
+			return this.ContainsKey(item.Key);
 		}
 
 		void ICollection<KeyValuePair<string, string>>.CopyTo(KeyValuePair<string, string>[] array, int arrayIndex)
@@ -182,12 +296,24 @@ namespace Zongsoft.Externals.Redis
 			if(item.Key == null)
 				return false;
 
-			return this.Redis.RemoveEntryFromHash(this.Name, item.Key);
+			return this.Remove(item.Key);
 		}
+		#endregion
 
+		#region 遍历枚举
 		public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
 		{
-			var entries = this.Redis.GetAllEntriesFromHash(this.Name);
+			Dictionary<string, string> entries;
+			var redis = this.Redis;
+
+			try
+			{
+				entries = redis.GetAllEntriesFromHash(this.Name);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 
 			foreach(var entry in entries)
 			{
@@ -199,5 +325,6 @@ namespace Zongsoft.Externals.Redis
 		{
 			return this.GetEnumerator();
 		}
+		#endregion
 	}
 }

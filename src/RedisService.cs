@@ -28,6 +28,7 @@ using System;
 using System.Net;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Threading;
 
 using ServiceStack.Redis;
 
@@ -36,7 +37,7 @@ namespace Zongsoft.Externals.Redis
 	public class RedisService : MarshalByRefObject, IRedisService, IDisposable, Zongsoft.Collections.IQueueProvider
 	{
 		#region 成员字段
-		private Lazy<ServiceStack.Redis.IRedisClient> _redisReference;
+		private Collections.ObjectPool<IRedisClient> _redisPool;
 		private IPEndPoint _address;
 		private string _password;
 		private int _databaseId;
@@ -48,7 +49,7 @@ namespace Zongsoft.Externals.Redis
 		public RedisService()
 		{
 			_address = new IPEndPoint(IPAddress.Loopback, 6379);
-			_redisReference = new Lazy<IRedisClient>(this.CreateProxy, true);
+			_redisPool = RedisPoolManager.GetRedisPool(_address, this.CreateProxy);
 		}
 
 		public RedisService(IPEndPoint address, string password = null, int databaseId = 0)
@@ -56,7 +57,7 @@ namespace Zongsoft.Externals.Redis
 			_address = address;
 			_password = password;
 			_databaseId = databaseId;
-			_redisReference = new Lazy<IRedisClient>(this.CreateProxy, true);
+			_redisPool = RedisPoolManager.GetRedisPool(_address, this.CreateProxy);
 		}
 
 		public RedisService(Configuration.RedisConfigurationElement config)
@@ -64,18 +65,20 @@ namespace Zongsoft.Externals.Redis
 			if(config == null)
 			{
 				_address = new IPEndPoint(IPAddress.Loopback, 6379);
-				return;
+			}
+			else
+			{
+				_address = Zongsoft.Communication.IPEndPointConverter.Parse(config.Address);
+
+				if(_address.Port == 0)
+					_address.Port = 6379;
+
+				_password = config.Password;
+				_databaseId = config.DatabaseId;
+				_timeout = config.Timeout;
 			}
 
-			_address = Zongsoft.Communication.IPEndPointConverter.Parse(config.Address);
-
-			if(_address.Port == 0)
-				_address.Port = 6379;
-
-			_password = config.Password;
-			_databaseId = config.DatabaseId;
-			_timeout = config.Timeout;
-			_redisReference = new Lazy<IRedisClient>(this.CreateProxy, true);
+			_redisPool = RedisPoolManager.GetRedisPool(_address, this.CreateProxy);
 		}
 		#endregion
 
@@ -132,16 +135,20 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return _redisReference == null;
+				return _redisPool == null;
 			}
 		}
 
-		public ServiceStack.Redis.IRedisClient Proxy
+		protected ServiceStack.Redis.IRedisClient Proxy
 		{
 			get
 			{
-				var reference = _redisReference;
-				return reference == null ? null : reference.Value;
+				var redisPool = _redisPool;
+
+				if(redisPool == null)
+					throw new ObjectDisposedException("RedisPool");
+
+				return redisPool.GetObject();
 			}
 		}
 		#endregion
@@ -149,17 +156,17 @@ namespace Zongsoft.Externals.Redis
 		#region 获取集合
 		public IRedisHashset GetHashset(string name)
 		{
-			return this.GetCacheEntry(name, RedisEntryType.Set, (key, redis) => new RedisHashset(key, redis));
+			return this.GetCacheEntry(name, RedisEntryType.Set, key => new RedisHashset(key, _redisPool));
 		}
 
 		public IRedisDictionary GetDictionary(string name)
 		{
-			return this.GetCacheEntry(name, RedisEntryType.Dictionary, (key, redis) => new RedisDictionary(key, redis));
+			return this.GetCacheEntry(name, RedisEntryType.Dictionary, key => new RedisDictionary(key, _redisPool));
 		}
 
 		public IRedisQueue GetQueue(string name)
 		{
-			return this.GetCacheEntry(name, RedisEntryType.List, (key, redis) => new RedisQueue(key, redis));
+			return this.GetCacheEntry(name, RedisEntryType.List, key => new RedisQueue(key, _redisPool));
 		}
 		#endregion
 
@@ -171,7 +178,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.GetValue(key);
+			try
+			{
+				return redis.GetValue(key);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public IEnumerable<string> GetValues(params string[] keys)
@@ -182,7 +196,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.GetValues(System.Linq.Enumerable.ToList(keys));
+			try
+			{
+				return redis.GetValues(System.Linq.Enumerable.ToList(keys));
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public string ExchangeValue(string key, string value)
@@ -193,7 +214,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.GetAndSetEntry(key, value);
+			try
+			{
+				return redis.GetAndSetEntry(key, value);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public string ExchangeValue(string key, string value, DateTime expires)
@@ -204,7 +232,10 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			using(var transaction = redis.CreateTransaction())
+			//创建一个Redis事务
+			var transaction = redis.CreateTransaction();
+
+			try
 			{
 				string result = null;
 
@@ -214,6 +245,13 @@ namespace Zongsoft.Externals.Redis
 				transaction.Commit();
 
 				return result;
+			}
+			finally
+			{
+				if(transaction != null)
+					transaction.Dispose();
+
+				_redisPool.Release(redis);
 			}
 		}
 
@@ -225,7 +263,10 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			using(var transaction = redis.CreateTransaction())
+			//创建一个Redis事务
+			var transaction = redis.CreateTransaction();
+
+			try
 			{
 				string result = null;
 
@@ -235,6 +276,13 @@ namespace Zongsoft.Externals.Redis
 				transaction.Commit();
 
 				return result;
+			}
+			finally
+			{
+				if(transaction != null)
+					transaction.Dispose();
+
+				_redisPool.Release(redis);
 			}
 		}
 
@@ -251,22 +299,29 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			if(requiredNotExists)
+			try
 			{
-				bool result = false;
-
-				using(var transaction = redis.CreateTransaction())
+				if(requiredNotExists)
 				{
-					transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
-					transaction.QueueCommand(proxy => proxy.ExpireEntryAt(key, expires));
+					bool result = false;
 
-					transaction.Commit();
+					using(var transaction = redis.CreateTransaction())
+					{
+						transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
+						transaction.QueueCommand(proxy => proxy.ExpireEntryAt(key, expires));
+
+						transaction.Commit();
+					}
+
+					return result;
 				}
 
-				return result;
+				return redis.Set(key, value, expires);
 			}
-
-			return redis.Set(key, value, expires);
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public bool SetValue(string key, string value, TimeSpan duration, bool requiredNotExists = false)
@@ -277,22 +332,29 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			if(requiredNotExists)
+			try
 			{
-				bool result = false;
-
-				using(var transaction = redis.CreateTransaction())
+				if(requiredNotExists)
 				{
-					transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
-					transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
+					bool result = false;
 
-					transaction.Commit();
+					using(var transaction = redis.CreateTransaction())
+					{
+						transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
+						transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
+
+						transaction.Commit();
+					}
+
+					return result;
 				}
 
-				return result;
+				return redis.Set(key, value, duration);
 			}
-
-			return redis.Set(key, value, duration);
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public RedisEntryType GetEntryType(string key)
@@ -303,8 +365,18 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			//获取Redis条目类型
-			var entryType = redis.GetEntryType(key);
+			//设置默认返回值
+			var entryType = RedisKeyType.None;
+
+			try
+			{
+				//获取Redis条目类型
+				entryType = redis.GetEntryType(key);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 
 			switch(entryType)
 			{
@@ -331,7 +403,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.GetTimeToLive(key);
+			try
+			{
+				return redis.GetTimeToLive(key);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public bool SetEntryExpire(string key, DateTime expires)
@@ -342,7 +421,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.ExpireEntryAt(key, expires);
+			try
+			{
+				return redis.ExpireEntryAt(key, expires);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public bool SetEntryExpire(string key, TimeSpan duration)
@@ -353,7 +439,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.ExpireEntryIn(key, duration);
+			try
+			{
+				return redis.ExpireEntryIn(key, duration);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public void Rename(string oldKey, string newKey)
@@ -367,7 +460,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			redis.RenameKey(oldKey, newKey);
+			try
+			{
+				redis.RenameKey(oldKey, newKey);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public void Clear()
@@ -375,7 +475,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			redis.DeleteAll<object>();
+			try
+			{
+				redis.DeleteAll<object>();
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public bool Remove(string key)
@@ -386,7 +493,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.Remove(key);
+			try
+			{
+				return redis.Remove(key);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public void RemoveRange(params string[] keys)
@@ -397,7 +511,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			redis.RemoveAll(keys);
+			try
+			{
+				redis.RemoveAll(keys);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public bool Contains(string key)
@@ -408,7 +529,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.ContainsKey(key);
+			try
+			{
+				return redis.ContainsKey(key);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public long Increment(string key, int interval = 1)
@@ -419,18 +547,17 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			if(interval < 1)
+			try
 			{
-				var text = redis.GetValue(key);
-				long result;
-
-				if(long.TryParse(text, out result))
-					return result;
+				if(interval == 1)
+					return redis.IncrementValue(key);
 				else
-					return -1;
+					return redis.IncrementValueBy(key, interval);
 			}
-
-			return redis.IncrementValueBy(key, interval);
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public long Decrement(string key, int interval = 1)
@@ -441,18 +568,17 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			if(interval < 1)
+			try
 			{
-				var text = redis.GetValue(key);
-				long result;
-
-				if(long.TryParse(text, out result))
-					return result;
+				if(interval == 1)
+					return redis.DecrementValue(key);
 				else
-					return -1;
+					return redis.DecrementValueBy(key, interval);
 			}
-
-			return redis.DecrementValueBy(key, interval);
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public HashSet<string> GetIntersect(params string[] sets)
@@ -463,7 +589,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.GetIntersectFromSets(sets);
+			try
+			{
+				return redis.GetIntersectFromSets(sets);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public void SetIntersect(string destination, params string[] sets)
@@ -474,7 +607,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			redis.StoreIntersectFromSets(destination, sets);
+			try
+			{
+				redis.StoreIntersectFromSets(destination, sets);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public HashSet<string> GetUnion(params string[] sets)
@@ -485,7 +625,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			return redis.GetUnionFromSets(sets);
+			try
+			{
+				return redis.GetUnionFromSets(sets);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		public void SetUnion(string destination, params string[] sets)
@@ -496,7 +643,14 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			redis.StoreUnionFromSets(destination, sets);
+			try
+			{
+				redis.StoreUnionFromSets(destination, sets);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
 		}
 
 		#region 虚拟方法
@@ -516,16 +670,10 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 私有方法
-		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, ServiceStack.Redis.IRedisClient, T> createThunk)
+		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, T> createThunk)
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				throw new ArgumentNullException("name");
-
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			if(redis == null)
-				return default(T);
 
 			//获取指定名称的条目类型
 			var storedEntryType = this.GetEntryType(name);
@@ -533,40 +681,35 @@ namespace Zongsoft.Externals.Redis
 			if(storedEntryType != RedisEntryType.None && storedEntryType != entryType)
 				throw new RedisException("The specified name entry is invalid entry.");
 
-			//获取当前数据库的缓存器
-			var cache = this.GetCache();
-
-			return (T)cache.Get(name, key => createThunk(key, redis));
-		}
-
-		private Zongsoft.Collections.ObjectCache<object> GetCache()
-		{
+			//确保缓存容器创建完成
 			if(_caches == null)
 				System.Threading.Interlocked.CompareExchange(ref _caches, new ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<object>>(), null);
 
-			return _caches.GetOrAdd(this.DatabaseId, new Collections.ObjectCache<object>());
+			//获取当前数据库的缓存器
+			var cache = _caches.GetOrAdd(this.DatabaseId, new Collections.ObjectCache<object>());
+
+			return (T)cache.Get(name, key => createThunk(key));
 		}
 		#endregion
 
 		#region 处置方法
 		public void Dispose()
 		{
+			this.Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			var pool = Interlocked.Exchange(ref _redisPool, null);
+
+			if(pool != null)
+				pool.Dispose();
+
 			var caches = _caches;
 
 			if(caches != null)
 				caches.Clear();
-
-			var reference = _redisReference;
-
-			if(reference != null && reference.IsValueCreated)
-			{
-				var redis = reference.Value;
-
-				if(redis != null)
-					redis.Dispose();
-			}
-
-			_redisReference = null;
 		}
 		#endregion
 
