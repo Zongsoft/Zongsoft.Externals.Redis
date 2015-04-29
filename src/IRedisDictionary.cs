@@ -53,7 +53,9 @@ namespace Zongsoft.Externals.Redis
 		/// <returns>如果新增成功则返回真(true)，否则返回假(false)。</returns>
 		bool TryAdd(string key, string value);
 
-		IEnumerable<string> GetValues(params string[] keys);
+		IReadOnlyList<string> GetValues(params string[] keys);
+
+		IReadOnlyDictionary<string, string> GetAllEntries();
 
 		long Increment(string key, int interval = 1);
 		long Decrement(string key, int interval = 1);

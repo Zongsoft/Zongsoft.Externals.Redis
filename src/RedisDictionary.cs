@@ -157,13 +157,27 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		public IEnumerable<string> GetValues(params string[] keys)
+		public IReadOnlyList<string> GetValues(params string[] keys)
 		{
 			var redis = this.Redis;
 
 			try
 			{
 				return redis.GetValuesFromHash(this.Name, keys);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
+		}
+
+		public IReadOnlyDictionary<string, string> GetAllEntries()
+		{
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.GetAllEntriesFromHash(this.Name);
 			}
 			finally
 			{
