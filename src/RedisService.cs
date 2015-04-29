@@ -42,7 +42,7 @@ namespace Zongsoft.Externals.Redis
 		private string _password;
 		private int _databaseId;
 		private TimeSpan _timeout;
-		private ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<object>> _caches;
+		private ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<RedisObjectBase>> _caches;
 		#endregion
 
 		#region 构造函数
@@ -670,7 +670,7 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 私有方法
-		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, T> createThunk)
+		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, T> createThunk) where T : RedisObjectBase
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				throw new ArgumentNullException("name");
@@ -683,12 +683,22 @@ namespace Zongsoft.Externals.Redis
 
 			//确保缓存容器创建完成
 			if(_caches == null)
-				System.Threading.Interlocked.CompareExchange(ref _caches, new ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<object>>(), null);
+				System.Threading.Interlocked.CompareExchange(ref _caches, new ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<RedisObjectBase>>(), null);
 
 			//获取当前数据库的缓存器
-			var cache = _caches.GetOrAdd(this.DatabaseId, new Collections.ObjectCache<object>());
+			var cache = _caches.GetOrAdd(this.DatabaseId, new Collections.ObjectCache<RedisObjectBase>());
 
-			return (T)cache.Get(name, key => createThunk(key));
+			return (T)cache.Get(name, key =>
+			{
+				var redisObject = createThunk(key);
+
+				redisObject.Disposed += (_, __) =>
+				{
+					cache.Remove(key);
+				};
+
+				return redisObject;
+			});
 		}
 		#endregion
 
