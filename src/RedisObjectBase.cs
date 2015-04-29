@@ -3,8 +3,12 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public abstract class RedisObjectBase : MarshalByRefObject
+	public abstract class RedisObjectBase : MarshalByRefObject, Zongsoft.Common.IDisposableObject
 	{
+		#region 事件定义
+		public event EventHandler<Common.DisposedEventArgs> Disposed;
+		#endregion
+
 		#region 成员字段
 		private string _name;
 		private Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> _redisPool;
@@ -50,7 +54,20 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return _redisPool.GetObject();
+				var redisPool = _redisPool;
+
+				if(redisPool == null)
+					throw new ObjectDisposedException(this.GetType().FullName);
+
+				return redisPool.GetObject();
+			}
+		}
+
+		public bool IsDisposed
+		{
+			get
+			{
+				return _redisPool == null;
 			}
 		}
 		#endregion
@@ -62,6 +79,24 @@ namespace Zongsoft.Externals.Redis
 			{
 				return _redisPool;
 			}
+		}
+		#endregion
+
+		#region 处置方法
+		public void Dispose()
+		{
+			this.Dispose(true);
+			GC.SuppressFinalize(this);
+
+			var disposed = this.Disposed;
+
+			if(disposed != null)
+				disposed(this, new Common.DisposedEventArgs(true));
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			_redisPool = null;
 		}
 		#endregion
 	}
