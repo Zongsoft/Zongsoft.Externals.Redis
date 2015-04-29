@@ -113,7 +113,7 @@ namespace Zongsoft.Externals.Redis
 			dictionary.SetRange(new KeyValuePair<string, string>[] {
 				new KeyValuePair<string, string>("Value", value.ToString()),
 				new KeyValuePair<string, string>("Interval", interval.ToString()),
-				new KeyValuePair<string, string>("FormatString", formatString),
+				new KeyValuePair<string, string>("FormatString", formatString ?? string.Empty),
 			});
 		}
 		#endregion
