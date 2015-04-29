@@ -32,6 +32,12 @@
 				<parameter type="ServiceStack.Redis.IRedisClient, ServiceStack.Interfaces" value="{srv:Redis.Proxy}"/>
 			</object.constructor>
 		</object>
+
+		<object name="RedisSequence" type="Zongsoft.Externals.Redis.RedisSequence, Zongsoft.Externals.Redis">
+			<object.constructor>
+				<parameter type="Zongsoft.Externals.Redis.RedisService, Zongsoft.Externals.Redis" value="{srv:Redis}"/>
+			</object.constructor>
+		</object>
 	</extension>
 
 	<!-- 将队列命令使用的队列对象替换成Redis队列 -->
