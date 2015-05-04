@@ -42,22 +42,25 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
+		protected override void OnExecute(Services.CommandContext context)
 		{
-			if(parameter.Arguments.Length < 1)
+			if(context.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(parameter.Arguments.Length == 1)
-				return this.Redis.GetDictionary(parameter.Arguments[0]).Count;
+			if(context.Arguments.Length == 1)
+			{
+				context.Result = this.Redis.GetDictionary(context.Arguments[0]).Count;
+				return;
+			}
 
-			var result = new long[parameter.Arguments.Length];
+			var result = new long[context.Arguments.Length];
 
 			for(int i = 0; i < result.Length; i++)
 			{
-				result[i] = this.Redis.GetDictionary(parameter.Arguments[i]).Count;
+				result[i] = this.Redis.GetDictionary(context.Arguments[i]).Count;
 			}
 
-			return result;
+			context.Result = result;
 		}
 		#endregion
 	}

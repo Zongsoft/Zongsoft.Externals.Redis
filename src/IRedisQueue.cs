@@ -31,12 +31,5 @@ namespace Zongsoft.Externals.Redis
 {
 	public interface IRedisQueue : Zongsoft.Collections.IQueue
 	{
-		/// <summary>
-		/// 获取当前<seealso cref="IRedisQueue"/>队列的名称。
-		/// </summary>
-		string Name
-		{
-			get;
-		}
 	}
 }

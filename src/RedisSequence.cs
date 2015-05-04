@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Zongsoft.Externals.Redis
 {
 	public class RedisSequence : Zongsoft.Common.ISequence
 	{
+		#region 静态字段
+		private static readonly Regex _regex = new Regex(@"(?<expr>\{\s*(?<name>([#.])|([A-Za-z_][^{\}\:]*))(\:(?<format>[^\{\}]+))?\s*\})", RegexOptions.Compiled | RegexOptions.ExplicitCapture | RegexOptions.IgnorePatternWhitespace);
+		#endregion
+
 		#region 成员字段
 		private IRedisService _redis;
 		#endregion
@@ -61,18 +66,24 @@ namespace Zongsoft.Externals.Redis
 		public string GetSequenceString(string name)
 		{
 			var dictionary = this.GetRedisDictionary(name);
-			var entries = dictionary.GetAllEntries();
+			var values = dictionary.GetValues("Interval", "FormatString");
+			var sequenceNumber = 0L;
 			var interval = 1;
 
-			int.TryParse(entries["Interval"], out interval);
-			var formatString = entries["FormatString"];
+			if(int.TryParse(values[0], out interval))
+				sequenceNumber = dictionary.Increment("Value", interval);
+			else
+				sequenceNumber = dictionary.Increment("Value");
 
-			throw new NotImplementedException();
+			return this.GetFormattedText(values[1], sequenceNumber);
 		}
 
 		public string GetSequenceString(string name, int interval)
 		{
-			throw new NotImplementedException();
+			var dictionary = this.GetRedisDictionary(name);
+			var sequenceNumber = dictionary.Increment("Value", interval);
+
+			return this.GetFormattedText(dictionary["FormatString"], sequenceNumber);
 		}
 
 		public Zongsoft.Common.SequenceInfo GetSequenceInfo(string name)
@@ -122,6 +133,30 @@ namespace Zongsoft.Externals.Redis
 		private IRedisDictionary GetRedisDictionary(string name)
 		{
 			return _redis.GetDictionary(this.GetType().FullName + ":" + name);
+		}
+
+		private string GetFormattedText(string formatString, long sequenceNumber)
+		{
+			if(string.IsNullOrWhiteSpace(formatString))
+				return sequenceNumber.ToString();
+
+			return _regex.Replace(formatString, match =>
+			{
+				var number = 0L;
+				var text = match.Groups["name"].Value;
+
+				if(text == "#" || text == ".")
+					number = sequenceNumber;
+				else
+					long.TryParse(this.GetRedisDictionary(text)["Value"], out number);
+
+				text = match.Groups["format"].Value;
+
+				if(string.IsNullOrWhiteSpace(text))
+					return number.ToString();
+				else
+					return number.ToString(text);
+			});
 		}
 		#endregion
 	}

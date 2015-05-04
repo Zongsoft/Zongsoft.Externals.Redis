@@ -34,6 +34,11 @@
 		<object name="RedisSequence" value="{path:/Workspace/Externals/RedisSequence}" />
 	</extension>
 
+	<!-- 为序号命令指定序号服务程序 -->
+	<extension path="/Workbench/Terminal/Commands">
+		<sequence.sequence>{srv:RedisSequence}</sequence.sequence>
+	</extension>
+
 	<!-- 为队列命令指定队列提供程序 -->
 	<extension path="/Workbench/Terminal/Commands/Collections">
 		<queue.queueProvider>{srv:Redis}</queue.queueProvider>

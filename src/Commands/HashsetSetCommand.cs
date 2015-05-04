@@ -42,7 +42,7 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override void Run(Services.CommandContext context)
+		protected override void OnExecute(Services.CommandContext context)
 		{
 			if(context.Arguments.Length < 2)
 				throw new Services.CommandException("Missing arguments.");

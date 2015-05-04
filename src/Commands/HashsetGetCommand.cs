@@ -45,14 +45,14 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
+		protected override void OnExecute(Services.CommandContext context)
 		{
-			if(parameter.Arguments.Length < 1)
+			if(context.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			var hashset = this.Redis.GetHashset(parameter.Arguments[0]);
+			var hashset = this.Redis.GetHashset(context.Arguments[0]);
 
-			return (IEnumerable<string>)hashset;
+			context.Result = (IEnumerable<string>)hashset;
 		}
 		#endregion
 	}

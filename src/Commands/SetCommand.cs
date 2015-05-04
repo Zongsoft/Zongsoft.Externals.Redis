@@ -45,25 +45,31 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
+		protected override void OnExecute(Services.CommandContext context)
 		{
-			if(parameter.Arguments.Length < 2)
+			if(context.Arguments.Length < 2)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			if(parameter.Options.Contains("duration") && parameter.Options.Contains("expires"))
+			if(context.Options.Contains("duration") && context.Options.Contains("expires"))
 				throw new Zongsoft.Services.CommandOptionException("duration, expires");
 
-			var notExists = parameter.Options.Contains("not") || parameter.Options.Contains("notExists");
+			var notExists = context.Options.Contains("not") || context.Options.Contains("notExists");
 
 			TimeSpan duration;
-			if(parameter.Options.TryGetValue<TimeSpan>("duration", out duration) && duration > TimeSpan.Zero)
-				return this.Redis.SetValue(parameter.Arguments[0], parameter.Arguments[1], duration, notExists);
+			if(context.Options.TryGetValue<TimeSpan>("duration", out duration) && duration > TimeSpan.Zero)
+			{
+				context.Result = this.Redis.SetValue(context.Arguments[0], context.Arguments[1], duration, notExists);
+				return;
+			}
 
 			DateTime expires;
-			if(parameter.Options.TryGetValue<DateTime>("expires", out expires) && expires > DateTime.Now)
-				return this.Redis.SetValue(parameter.Arguments[0], parameter.Arguments[1], expires, notExists);
+			if(context.Options.TryGetValue<DateTime>("expires", out expires) && expires > DateTime.Now)
+			{
+				context.Result = this.Redis.SetValue(context.Arguments[0], context.Arguments[1], expires, notExists);
+				return;
+			}
 
-			return this.Redis.SetValue(parameter.Arguments[0], parameter.Arguments[1], TimeSpan.Zero, notExists);
+			context.Result = this.Redis.SetValue(context.Arguments[0], context.Arguments[1], TimeSpan.Zero, notExists);
 		}
 		#endregion
 	}

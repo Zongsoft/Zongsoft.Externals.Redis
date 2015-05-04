@@ -45,28 +45,32 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
+		protected override void OnExecute(Services.CommandContext context)
 		{
-			if(parameter.Arguments.Length < 1)
+			if(context.Arguments.Length < 1)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			var dictionary = this.Redis.GetDictionary(parameter.Arguments[0]);
+			var dictionary = this.Redis.GetDictionary(context.Arguments[0]);
 
-			switch(parameter.Arguments.Length)
+			switch(context.Arguments.Length)
 			{
 				case 1:
-					if(parameter.Options.Contains("all"))
-						return (IEnumerable<KeyValuePair<string, string>>)dictionary;
-					else
-						throw new Zongsoft.Services.CommandException("Missing arguments.");
+					if(context.Options.Contains("all"))
+					{
+						context.Result = (IEnumerable<KeyValuePair<string, string>>)dictionary;
+						return;
+					}
+
+					throw new Zongsoft.Services.CommandException("Missing arguments.");
 				case 2:
-					return dictionary[parameter.Arguments[1]];
+					context.Result = dictionary[context.Arguments[1]];
+					return;
 			}
 
-			var keys = new string[parameter.Arguments.Length - 1];
-			Array.Copy(parameter.Arguments, 1, keys, 0, keys.Length);
+			var keys = new string[context.Arguments.Length - 1];
+			Array.Copy(context.Arguments, 1, keys, 0, keys.Length);
 
-			return dictionary.GetValues(keys);
+			context.Result = dictionary.GetValues(keys);
 		}
 		#endregion
 	}

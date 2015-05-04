@@ -43,14 +43,14 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
+		protected override void OnExecute(Services.CommandContext context)
 		{
-			if(parameter.Arguments.Length < 2)
+			if(context.Arguments.Length < 2)
 				throw new Zongsoft.Services.CommandException("The arguments is not enough.");
 
-			int interval = (int)parameter.Options["interval"];
+			int interval = (int)context.Options["interval"];
 
-			return this.Redis.GetDictionary(parameter.Arguments[0]).Decrement(parameter.Arguments[1], interval);
+			context.Result = this.Redis.GetDictionary(context.Arguments[0]).Decrement(context.Arguments[1], interval);
 		}
 		#endregion
 	}
