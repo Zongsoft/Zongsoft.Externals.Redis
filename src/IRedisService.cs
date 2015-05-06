@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.CoreLibrary.
  *
@@ -57,6 +57,13 @@ namespace Zongsoft.Externals.Redis
 		IRedisDictionary GetDictionary(string name);
 		IRedisQueue GetQueue(string name);
 		#endregion
+
+		/// <summary>
+		/// 获取指定键的条目。
+		/// </summary>
+		/// <param name="key">指定要获取的键。</param>
+		/// <returns>如果指定的键存在则返回对应的条目对象。</returns>
+		object GetEntry(string key);
 
 		string GetValue(string key);
 		IEnumerable<string> GetValues(params string[] keys);

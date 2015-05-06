@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.CoreLibrary.
  *
@@ -34,7 +34,7 @@ using ServiceStack.Redis;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisService : MarshalByRefObject, IRedisService, IDisposable, Zongsoft.Collections.IQueueProvider
+	public class RedisService : MarshalByRefObject, IRedisService, IDisposable, Zongsoft.Collections.IQueueProvider, Zongsoft.Runtime.Caching.ICache, Zongsoft.Runtime.Caching.ICacheProvider
 	{
 		#region 成员字段
 		private Collections.ObjectPool<IRedisClient> _redisPool;
@@ -169,6 +169,27 @@ namespace Zongsoft.Externals.Redis
 			return this.GetCacheEntry(name, RedisEntryType.List, key => new RedisQueue(key, _redisPool));
 		}
 		#endregion
+
+		#region 公共方法
+		public object GetEntry(string key)
+		{
+			var entryType = this.GetEntryType(key);
+
+			switch(entryType)
+			{
+				case RedisEntryType.Dictionary:
+					return this.GetDictionary(key);
+				case RedisEntryType.List:
+					return this.GetQueue(key);
+				case RedisEntryType.Set:
+				case RedisEntryType.SortedSet:
+					return this.GetHashset(key);
+				case RedisEntryType.String:
+					return this.GetValue(key);
+			}
+
+			return null;
+		}
 
 		public string GetValue(string key)
 		{
@@ -539,6 +560,24 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
+		public bool Exists(string key)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException("key");
+
+			//获取或创建Redis客户端代理对象
+			var redis = this.Proxy;
+
+			try
+			{
+				return redis.ContainsKey(key);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
+		}
+
 		public long Increment(string key, int interval = 1)
 		{
 			if(string.IsNullOrWhiteSpace(key))
@@ -652,6 +691,7 @@ namespace Zongsoft.Externals.Redis
 				_redisPool.Release(redis);
 			}
 		}
+		#endregion
 
 		#region 虚拟方法
 		protected virtual ServiceStack.Redis.IRedisClient CreateProxy()
@@ -702,6 +742,158 @@ namespace Zongsoft.Externals.Redis
 		}
 		#endregion
 
+		#region 缓存接口
+		long Zongsoft.Runtime.Caching.ICache.Count
+		{
+			get
+			{
+				throw new NotSupportedException("The cache container isn't supports the feature.");
+			}
+		}
+
+		Zongsoft.Runtime.Caching.ICacheCreator Zongsoft.Runtime.Caching.ICache.Creator
+		{
+			get;
+			set;
+		}
+
+		TimeSpan? Zongsoft.Runtime.Caching.ICache.GetDuration(string key)
+		{
+			var duration = this.GetEntryExpire(key);
+
+			if(duration == TimeSpan.Zero)
+				return null;
+
+			return duration;
+		}
+
+		void Zongsoft.Runtime.Caching.ICache.SetDuration(string key, TimeSpan duration)
+		{
+			this.SetEntryExpire(key, duration);
+		}
+
+		object Zongsoft.Runtime.Caching.ICache.GetValue(string key)
+		{
+			var creator = ((Zongsoft.Runtime.Caching.ICache)this).Creator;
+
+			if(creator == null)
+				return this.GetEntry(key);
+
+			return ((Zongsoft.Runtime.Caching.ICache)this).GetValue(key, _ =>
+			{
+				TimeSpan duration;
+				return new Tuple<object, TimeSpan>(creator.Create(null, _, out duration), duration);
+			});
+		}
+
+		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Tuple<object, TimeSpan>> valueCreator)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException("key");
+
+			if(valueCreator == null)
+				return this.GetEntry(key);
+
+			var redis = this.Proxy;
+
+			try
+			{
+				var result = valueCreator(key);
+
+				if(result == null && result.Item1 == null)
+				{
+					redis.Remove(key);
+					return null;
+				}
+
+				if(redis.SetEntryIfNotExists(key, result.Item1.ToString()))
+				{
+					if(result.Item2 > TimeSpan.Zero)
+						redis.ExpireEntryIn(key, result.Item2);
+
+					return result.Item1;
+				}
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
+
+			return this.GetEntry(key);
+		}
+
+		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value)
+		{
+			if(value == null)
+				return this.Remove(key);
+			else
+				return this.SetValue(key, value.ToString());
+		}
+
+		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, bool requiredNotExists, TimeSpan? duration = null)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException("key");
+
+			if(value == null)
+				return this.Remove(key);
+
+			//获取或创建Redis客户端代理对象
+			var redis = this.Proxy;
+
+			try
+			{
+				if(requiredNotExists)
+				{
+					bool result = false;
+
+					using(var transaction = redis.CreateTransaction())
+					{
+						transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value.ToString()), _ => result = _);
+
+						if(duration.HasValue && duration.Value > TimeSpan.Zero)
+							transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration.Value));
+
+						transaction.Commit();
+					}
+
+					return result;
+				}
+
+				if(duration.HasValue && duration.Value > TimeSpan.Zero)
+					return redis.Set(key, value, duration.Value);
+				else
+					return redis.Set(key, value);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
+		}
+
+		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, TimeSpan duration, bool requiredNotExists = false)
+		{
+			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, requiredNotExists, duration);
+		}
+		#endregion
+
+		#region 获取缓存
+		Zongsoft.Runtime.Caching.ICache Zongsoft.Runtime.Caching.ICacheProvider.GetCache(string name)
+		{
+			if(string.IsNullOrWhiteSpace(name))
+				return this;
+
+			return this.GetDictionary(name.Trim()) as Zongsoft.Runtime.Caching.ICache;
+		}
+		#endregion
+
+		#region 获取队列
+		Zongsoft.Collections.IQueue Zongsoft.Collections.IQueueProvider.GetQueue(string name)
+		{
+			return this.GetQueue(name);
+		}
+		#endregion
+
 		#region 处置方法
 		public void Dispose()
 		{
@@ -720,13 +912,6 @@ namespace Zongsoft.Externals.Redis
 
 			if(caches != null)
 				caches.Clear();
-		}
-		#endregion
-
-		#region 获取队列
-		Collections.IQueue Collections.IQueueProvider.GetQueue(string name)
-		{
-			return this.GetQueue(name);
 		}
 		#endregion
 	}

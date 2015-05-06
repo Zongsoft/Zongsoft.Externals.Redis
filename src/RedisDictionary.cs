@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.CoreLibrary.
  *
@@ -29,7 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisDictionary : RedisObjectBase, IRedisDictionary
+	public class RedisDictionary : RedisObjectBase, IRedisDictionary, Zongsoft.Runtime.Caching.ICache
 	{
 		#region 构造函数
 		public RedisDictionary(string name, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> redisPool) : base(name, redisPool)
@@ -242,6 +242,20 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
+		public bool Exists(string key)
+		{
+			var redis = this.Redis;
+
+			try
+			{
+				return redis.HashContainsEntry(this.Name, key);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
+		}
+
 		public bool Remove(string key)
 		{
 			var redis = this.Redis;
@@ -311,6 +325,146 @@ namespace Zongsoft.Externals.Redis
 				return false;
 
 			return this.Remove(item.Key);
+		}
+		#endregion
+
+		#region 缓存接口
+		long Zongsoft.Runtime.Caching.ICache.Count
+		{
+			get
+			{
+				var redis = this.Redis;
+
+				try
+				{
+					return redis.GetHashCount(this.Name);
+				}
+				finally
+				{
+					this.RedisPool.Release(redis);
+				}
+			}
+		}
+
+		Zongsoft.Runtime.Caching.ICacheCreator Zongsoft.Runtime.Caching.ICache.Creator
+		{
+			get;
+			set;
+		}
+
+		TimeSpan? Zongsoft.Runtime.Caching.ICache.GetDuration(string key)
+		{
+			throw new NotSupportedException("The cache container isn't supports the feature.");
+		}
+
+		void Zongsoft.Runtime.Caching.ICache.SetDuration(string key, TimeSpan duration)
+		{
+			throw new NotSupportedException("The cache container isn't supports the feature.");
+		}
+
+		public object GetValue(string key)
+		{
+			var creator = ((Zongsoft.Runtime.Caching.ICache)this).Creator;
+
+			if(creator == null)
+				return ((Zongsoft.Runtime.Caching.ICache)this).GetValue(key, null);
+			else
+				return ((Zongsoft.Runtime.Caching.ICache)this).GetValue(key, _ =>
+				{
+					TimeSpan duration;
+					return new Tuple<object, TimeSpan>(creator.Create(this.Name, _, out duration), duration);
+				});
+		}
+
+		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Tuple<object, TimeSpan>> valueCreator)
+		{
+			var redis = this.Redis;
+
+			try
+			{
+				if(valueCreator == null)
+					return redis.GetValueFromHash(this.Name, key);
+
+				var result = valueCreator(key);
+
+				if(result == null && result.Item1 == null)
+				{
+					redis.RemoveEntryFromHash(this.Name, key);
+					return null;
+				}
+
+				if(redis.SetEntryInHashIfNotExists(this.Name, key, result.Item1.ToString()))
+					return result.Item1;
+
+				return redis.GetValueFromHash(this.Name, key);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
+		}
+
+		public bool SetValue(string key, object value)
+		{
+			var redis = this.Redis;
+
+			try
+			{
+				if(value == null)
+					return redis.RemoveEntryFromHash(this.Name, key);
+				else
+					return redis.SetEntryInHash(this.Name, key, value.ToString());
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
+		}
+
+		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, bool requiredNotExists, TimeSpan? duration = null)
+		{
+			if(duration != null && duration.Value > TimeSpan.Zero)
+				throw new NotSupportedException("The cache container isn't supports the feature.");
+
+			var redis = this.Redis;
+
+			try
+			{
+				if(value == null)
+					return redis.RemoveEntryFromHash(this.Name, key);
+
+				if(requiredNotExists)
+					return redis.SetEntryInHashIfNotExists(this.Name, key, value.ToString());
+				else
+					return redis.SetEntryInHash(this.Name, key, value.ToString());
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
+		}
+
+		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, TimeSpan duration, bool requiredNotExists = false)
+		{
+			if(duration > TimeSpan.Zero)
+				throw new NotSupportedException("The cache container isn't supports the feature.");
+
+			var redis = this.Redis;
+
+			try
+			{
+				if(value == null)
+					return redis.RemoveEntryFromHash(this.Name, key);
+
+				if(requiredNotExists)
+					return redis.SetEntryInHashIfNotExists(this.Name, key, value.ToString());
+				else
+					return redis.SetEntryInHash(this.Name, key, value.ToString());
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
 		}
 		#endregion
 
