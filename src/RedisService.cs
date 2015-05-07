@@ -307,7 +307,9 @@ namespace Zongsoft.Externals.Redis
 					using(var transaction = redis.CreateTransaction())
 					{
 						transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
-						transaction.QueueCommand(proxy => proxy.ExpireEntryAt(key, expires));
+
+						if(expires.Year > 2010)
+							transaction.QueueCommand(proxy => proxy.ExpireEntryAt(key, expires));
 
 						transaction.Commit();
 					}
@@ -340,7 +342,9 @@ namespace Zongsoft.Externals.Redis
 					using(var transaction = redis.CreateTransaction())
 					{
 						transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
-						transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
+
+						if(duration > TimeSpan.Zero)
+							transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
 
 						transaction.Commit();
 					}
