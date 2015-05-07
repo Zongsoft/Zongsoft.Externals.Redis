@@ -118,7 +118,7 @@ namespace Zongsoft.Externals.Redis.Configuration
 			}
 		}
 
-		[OptionConfigurationProperty(XML_TIMEOUT_ATTRIBUTE, DefaultValue = 64)]
+		[OptionConfigurationProperty(XML_POOLSIZE_ATTRIBUTE, DefaultValue = 64)]
 		public int PoolSize
 		{
 			get
