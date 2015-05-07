@@ -61,16 +61,13 @@ namespace Zongsoft.Externals.Redis
 		IEnumerable<string> GetValues(params string[] keys);
 
 		string ExchangeValue(string key, string value);
-		string ExchangeValue(string key, string value, DateTime expires);
 		string ExchangeValue(string key, string value, TimeSpan duration);
 
 		bool SetValue(string key, string value);
-		bool SetValue(string key, string value, DateTime expires, bool requiredNotExists = false);
 		bool SetValue(string key, string value, TimeSpan duration, bool requiredNotExists = false);
 
 		RedisEntryType GetEntryType(string key);
 		TimeSpan GetEntryExpire(string key);
-		bool SetEntryExpire(string key, DateTime expires);
 		bool SetEntryExpire(string key, TimeSpan duration);
 
 		void Clear();

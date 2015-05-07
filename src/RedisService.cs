@@ -223,37 +223,6 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		public string ExchangeValue(string key, string value, DateTime expires)
-		{
-			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
-
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			//创建一个Redis事务
-			var transaction = redis.CreateTransaction();
-
-			try
-			{
-				string result = null;
-
-				transaction.QueueCommand(proxy => proxy.GetAndSetEntry(key, value), s => result = s);
-				transaction.QueueCommand(proxy => proxy.ExpireEntryAt(key, expires));
-
-				transaction.Commit();
-
-				return result;
-			}
-			finally
-			{
-				if(transaction != null)
-					transaction.Dispose();
-
-				_redisPool.Release(redis);
-			}
-		}
-
 		public string ExchangeValue(string key, string value, TimeSpan duration)
 		{
 			if(string.IsNullOrWhiteSpace(key))
@@ -262,12 +231,15 @@ namespace Zongsoft.Externals.Redis
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
-			//创建一个Redis事务
-			var transaction = redis.CreateTransaction();
+			//定义Redis事务变量
+			IRedisTransaction transaction = null;
 
 			try
 			{
 				string result = null;
+
+				//创建一个Redis事务
+				transaction = redis.CreateTransaction();
 
 				transaction.QueueCommand(proxy => proxy.GetAndSetEntry(key, value), s => result = s);
 				transaction.QueueCommand(proxy => proxy.ExpireEntryIn(key, duration));
@@ -288,44 +260,6 @@ namespace Zongsoft.Externals.Redis
 		public bool SetValue(string key, string value)
 		{
 			return this.SetValue(key, value, TimeSpan.Zero);
-		}
-
-		public bool SetValue(string key, string value, DateTime expires, bool requiredNotExists = false)
-		{
-			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
-
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				if(requiredNotExists)
-				{
-					bool result = false;
-
-					using(var transaction = redis.CreateTransaction())
-					{
-						transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
-
-						if(expires.Year > 2010)
-							transaction.QueueCommand(proxy => proxy.ExpireEntryAt(key, expires));
-
-						transaction.Commit();
-					}
-
-					return result;
-				}
-
-				if(expires.Year > 2010)
-					return redis.Set(key, value, expires);
-				else
-					return redis.Set(key, value);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
 		}
 
 		public bool SetValue(string key, string value, TimeSpan duration, bool requiredNotExists = false)
@@ -356,9 +290,11 @@ namespace Zongsoft.Externals.Redis
 				}
 
 				if(duration > TimeSpan.Zero)
-					return redis.Set(key, value, duration);
+					redis.SetEntry(key, value, duration);
 				else
-					return redis.Set(key, value);
+					redis.SetEntry(key, value);
+
+				return true;
 			}
 			finally
 			{
@@ -415,24 +351,6 @@ namespace Zongsoft.Externals.Redis
 			try
 			{
 				return redis.GetTimeToLive(key);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
-		}
-
-		public bool SetEntryExpire(string key, DateTime expires)
-		{
-			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
-
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.ExpireEntryAt(key, expires);
 			}
 			finally
 			{
@@ -870,9 +788,11 @@ namespace Zongsoft.Externals.Redis
 				}
 
 				if(duration.HasValue && duration.Value > TimeSpan.Zero)
-					return redis.Set(key, value, duration.Value);
+					redis.SetEntry(key, value.ToString(), duration.Value);
 				else
-					return redis.Set(key, value);
+					redis.SetEntry(key, value.ToString());
+
+				return true;
 			}
 			finally
 			{

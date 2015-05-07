@@ -30,7 +30,6 @@ using System.Collections.Generic;
 namespace Zongsoft.Externals.Redis.Commands
 {
 	[Zongsoft.Services.CommandOption("not", Description = "${Text.SetCommand.NotExists}")]
-	[Zongsoft.Services.CommandOption("expires", Type = typeof(DateTime), Description = "${Text.SetCommand.Expires}")]
 	[Zongsoft.Services.CommandOption("duration", Type = typeof(TimeSpan), Description = "${Text.SetCommand.Duration}")]
 	public class SetCommand : RedisCommandBase
 	{
@@ -59,13 +58,6 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Options.TryGetValue<TimeSpan>("duration", out duration) && duration > TimeSpan.Zero)
 			{
 				context.Result = this.Redis.SetValue(context.Arguments[0], context.Arguments[1], duration, notExists);
-				return;
-			}
-
-			DateTime expires;
-			if(context.Options.TryGetValue<DateTime>("expires", out expires) && expires > DateTime.Now)
-			{
-				context.Result = this.Redis.SetValue(context.Arguments[0], context.Arguments[1], expires, notExists);
 				return;
 			}
 
