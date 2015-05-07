@@ -2,16 +2,16 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
- * This file is part of Zongsoft.CoreLibrary.
+ * This file is part of Zongsoft.Externals.Redis.
  *
- * Zongsoft.CoreLibrary is free software; you can redistribute it and/or
+ * Zongsoft.Externals.Redis is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * Zongsoft.CoreLibrary is distributed in the hope that it will be useful,
+ * Zongsoft.Externals.Redis is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Lesser General Public License for more details.
@@ -20,7 +20,7 @@
  * included in all copies or substantial portions of the Software.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with Zongsoft.CoreLibrary; if not, write to the Free Software
+ * License along with Zongsoft.Externals.Redis; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
@@ -40,6 +40,7 @@ namespace Zongsoft.Externals.Redis.Configuration
 		private const string XML_DATABASEID_ATTRIBUTE = "databaseId";
 		private const string XML_PASSWORD_ATTRIBUTE = "password";
 		private const string XML_TIMEOUT_ATTRIBUTE = "timeout";
+		private const string XML_POOLSIZE_ATTRIBUTE = "poolSize";
 		#endregion
 
 		#region 公共属性
@@ -114,6 +115,19 @@ namespace Zongsoft.Externals.Redis.Configuration
 			set
 			{
 				this[XML_TIMEOUT_ATTRIBUTE] = value;
+			}
+		}
+
+		[OptionConfigurationProperty(XML_TIMEOUT_ATTRIBUTE, DefaultValue = 64)]
+		public int PoolSize
+		{
+			get
+			{
+				return (int)this[XML_POOLSIZE_ATTRIBUTE];
+			}
+			set
+			{
+				this[XML_POOLSIZE_ATTRIBUTE] = Math.Max(value, 16);
 			}
 		}
 		#endregion

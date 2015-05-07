@@ -4,14 +4,14 @@
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
- * This file is part of Zongsoft.CoreLibrary.
+ * This file is part of Zongsoft.Externals.Redis.
  *
- * Zongsoft.CoreLibrary is free software; you can redistribute it and/or
+ * Zongsoft.Externals.Redis is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * Zongsoft.CoreLibrary is distributed in the hope that it will be useful,
+ * Zongsoft.Externals.Redis is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Lesser General Public License for more details.
@@ -20,7 +20,7 @@
  * included in all copies or substantial portions of the Software.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with Zongsoft.CoreLibrary; if not, write to the Free Software
+ * License along with Zongsoft.Externals.Redis; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
@@ -37,97 +37,70 @@ namespace Zongsoft.Externals.Redis
 	public class RedisService : MarshalByRefObject, IRedisService, IDisposable, Zongsoft.Collections.IQueueProvider, Zongsoft.Runtime.Caching.ICache, Zongsoft.Runtime.Caching.ICacheProvider
 	{
 		#region 成员字段
-		private Collections.ObjectPool<IRedisClient> _redisPool;
-		private IPEndPoint _address;
-		private string _password;
-		private int _databaseId;
-		private TimeSpan _timeout;
+		private RedisServiceSettings _settings;
+		private Zongsoft.Collections.ObjectPool<IRedisClient> _redisPool;
 		private ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<RedisObjectBase>> _caches;
 		#endregion
 
 		#region 构造函数
 		public RedisService()
 		{
-			_address = new IPEndPoint(IPAddress.Loopback, 6379);
-			_redisPool = RedisPoolManager.GetRedisPool(_address, this.CreateProxy);
+			_settings = new RedisServiceSettings();
+			_redisPool = RedisPoolManager.GetRedisPool(_settings.Address, _settings.PoolSize, this.CreateProxy);
 		}
 
 		public RedisService(IPEndPoint address, string password = null, int databaseId = 0)
 		{
-			_address = address;
-			_password = password;
-			_databaseId = databaseId;
-			_redisPool = RedisPoolManager.GetRedisPool(_address, this.CreateProxy);
+			_settings = new RedisServiceSettings(address, password, databaseId);
+			_redisPool = RedisPoolManager.GetRedisPool(_settings.Address, _settings.PoolSize, this.CreateProxy);
+		}
+
+		public RedisService(RedisServiceSettings settings)
+		{
+			if(settings == null)
+				throw new ArgumentNullException("settings");
+
+			_settings = settings;
+			_redisPool = RedisPoolManager.GetRedisPool(_settings.Address, _settings.PoolSize, this.CreateProxy);
 		}
 
 		public RedisService(Configuration.RedisConfigurationElement config)
 		{
 			if(config == null)
 			{
-				_address = new IPEndPoint(IPAddress.Loopback, 6379);
+				_settings = new RedisServiceSettings();
 			}
 			else
 			{
-				_address = Zongsoft.Communication.IPEndPointConverter.Parse(config.Address);
+				var address = Zongsoft.Communication.IPEndPointConverter.Parse(config.Address);
 
-				if(_address.Port == 0)
-					_address.Port = 6379;
+				if(address.Port == 0)
+					address.Port = 6379;
 
-				_password = config.Password;
-				_databaseId = config.DatabaseId;
-				_timeout = config.Timeout;
+				_settings = new RedisServiceSettings(address, config.Password, config.DatabaseId)
+				{
+					PoolSize = config.PoolSize,
+					Timeout = config.Timeout,
+				};
 			}
 
-			_redisPool = RedisPoolManager.GetRedisPool(_address, this.CreateProxy);
+			_redisPool = RedisPoolManager.GetRedisPool(_settings.Address, _settings.PoolSize, this.CreateProxy);
 		}
 		#endregion
 
 		#region 公共属性
-		public IPEndPoint Address
+		public RedisServiceSettings Settings
 		{
 			get
 			{
-				return _address;
+				return _settings;
 			}
 			set
 			{
-				if(_address == value)
-					return;
+				if(value == null)
+					throw new ArgumentNullException();
 
-				_address = value;
-			}
-		}
-
-		public string Password
-		{
-			set
-			{
-				_password = value;
-			}
-		}
-
-		public int DatabaseId
-		{
-			get
-			{
-				return _databaseId;
-			}
-			set
-			{
-				if(_databaseId != value)
-					_databaseId = Math.Abs(value);
-			}
-		}
-
-		public TimeSpan Timeout
-		{
-			get
-			{
-				return _timeout;
-			}
-			set
-			{
-				_timeout = value;
+				_settings = value;
 			}
 		}
 
@@ -171,6 +144,11 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 公共方法
+		public RedisNotification CreateNotification()
+		{
+			return new RedisNotification(this.CreateProxy());
+		}
+
 		public object GetEntry(string key)
 		{
 			var entryType = this.GetEntryType(key);
@@ -691,18 +669,39 @@ namespace Zongsoft.Externals.Redis
 				_redisPool.Release(redis);
 			}
 		}
+
+		public int Notifiy(string channel, string message)
+		{
+			if(string.IsNullOrWhiteSpace(channel))
+				throw new ArgumentNullException("channel");
+
+			if(string.IsNullOrEmpty(message))
+				return 0;
+
+			//获取或创建Redis客户端代理对象
+			var redis = this.Proxy;
+
+			try
+			{
+				return (int)redis.PublishMessage(channel, message);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
+		}
 		#endregion
 
 		#region 虚拟方法
-		protected virtual ServiceStack.Redis.IRedisClient CreateProxy()
+		protected virtual ServiceStack.Redis.RedisClient CreateProxy()
 		{
-			var redis = new ServiceStack.Redis.RedisClient(_address.Address.ToString(), _address.Port, _password, _databaseId);
+			var redis = new ServiceStack.Redis.RedisClient(_settings.Address.Address.ToString(), _settings.Address.Port, _settings.Password, _settings.DatabaseId);
 
-			if(_timeout > TimeSpan.Zero)
+			if(_settings.Timeout > TimeSpan.Zero)
 			{
-				redis.ConnectTimeout = (int)_timeout.TotalMilliseconds;
-				redis.RetryTimeout = (int)_timeout.TotalMilliseconds;
-				redis.SendTimeout = (int)_timeout.TotalMilliseconds;
+				redis.ConnectTimeout = (int)_settings.Timeout.TotalMilliseconds;
+				redis.RetryTimeout = (int)_settings.Timeout.TotalMilliseconds;
+				redis.SendTimeout = (int)_settings.Timeout.TotalMilliseconds;
 			}
 
 			return redis;
@@ -726,7 +725,7 @@ namespace Zongsoft.Externals.Redis
 				System.Threading.Interlocked.CompareExchange(ref _caches, new ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<RedisObjectBase>>(), null);
 
 			//获取当前数据库的缓存器
-			var cache = _caches.GetOrAdd(this.DatabaseId, new Collections.ObjectCache<RedisObjectBase>());
+			var cache = _caches.GetOrAdd(_settings.DatabaseId, new Collections.ObjectCache<RedisObjectBase>());
 
 			return (T)cache.Get(name, key =>
 			{

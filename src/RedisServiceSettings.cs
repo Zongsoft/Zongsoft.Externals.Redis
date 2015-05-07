@@ -25,56 +25,103 @@
  */
 
 using System;
+using System.Net;
+using System.Collections.Generic;
 
-namespace Zongsoft.Externals.Redis.Commands
+namespace Zongsoft.Externals.Redis
 {
-	public abstract class RedisCommandBase : Zongsoft.Services.CommandBase<Zongsoft.Services.CommandContext>
+	[Serializable]
+	public class RedisServiceSettings
 	{
 		#region 成员字段
-		private IRedisService _redis;
+		private IPEndPoint _address;
+		private string _password;
+		private int _databaseId;
+		private TimeSpan _timeout;
+		private int _poolSize;
 		#endregion
 
 		#region 构造函数
-		protected RedisCommandBase()
+		public RedisServiceSettings()
 		{
+			_address = new IPEndPoint(IPAddress.Loopback, 6379);
 		}
 
-		protected RedisCommandBase(string name) : base(name)
+		public RedisServiceSettings(IPEndPoint address, string password, int databaseId = 0)
 		{
-		}
+			if(address == null)
+				throw new ArgumentNullException("address");
 
-		protected RedisCommandBase(IRedisService redis)
-		{
-			_redis = redis;
-		}
-
-		protected RedisCommandBase(IRedisService redis, string name) : base(name)
-		{
-			_redis = redis;
+			_address = address;
+			_password = password;
+			_databaseId = Math.Abs(databaseId);
 		}
 		#endregion
 
 		#region 公共属性
-		public IRedisService Redis
+		public IPEndPoint Address
 		{
 			get
 			{
-				return _redis;
+				return _address;
 			}
 			set
 			{
 				if(value == null)
 					throw new ArgumentNullException();
 
-				_redis = value;
+				if(_address != value)
+					_address = value;
 			}
 		}
-		#endregion
 
-		#region 重写方法
-		public override bool CanExecute(Services.CommandContext parameter)
+		public string Password
 		{
-			return _redis != null && base.CanExecute(parameter);
+			get
+			{
+				return _password;
+			}
+			set
+			{
+				_password = value;
+			}
+		}
+
+		public int DatabaseId
+		{
+			get
+			{
+				return _databaseId;
+			}
+			set
+			{
+				if(_databaseId != value)
+					_databaseId = Math.Abs(value);
+			}
+		}
+
+		public TimeSpan Timeout
+		{
+			get
+			{
+				return _timeout;
+			}
+			set
+			{
+				_timeout = value;
+			}
+		}
+
+		public int PoolSize
+		{
+			get
+			{
+				return _poolSize;
+			}
+			set
+			{
+				_poolSize = Math.Max(value, 16);
+			}
 		}
 		#endregion
 	}

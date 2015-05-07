@@ -4,14 +4,14 @@
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
- * This file is part of Zongsoft.CoreLibrary.
+ * This file is part of Zongsoft.Externals.Redis.
  *
- * Zongsoft.CoreLibrary is free software; you can redistribute it and/or
+ * Zongsoft.Externals.Redis is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * Zongsoft.CoreLibrary is distributed in the hope that it will be useful,
+ * Zongsoft.Externals.Redis is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Lesser General Public License for more details.
@@ -20,7 +20,7 @@
  * included in all copies or substantial portions of the Software.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with Zongsoft.CoreLibrary; if not, write to the Free Software
+ * License along with Zongsoft.Externals.Redis; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
@@ -34,21 +34,11 @@ namespace Zongsoft.Externals.Redis
 	{
 		#region 公共属性
 		/// <summary>
-		/// 获取或设置当前Redis服务器的地址。
+		/// 获取当前Redis服务的设置参数。
 		/// </summary>
-		IPEndPoint Address
+		RedisServiceSettings Settings
 		{
 			get;
-			set;
-		}
-
-		/// <summary>
-		/// 获取或设置当前服务操作的Redis数据库编号。
-		/// </summary>
-		int DatabaseId
-		{
-			get;
-			set;
 		}
 		#endregion
 
@@ -57,6 +47,8 @@ namespace Zongsoft.Externals.Redis
 		IRedisDictionary GetDictionary(string name);
 		IRedisQueue GetQueue(string name);
 		#endregion
+
+		RedisNotification CreateNotification();
 
 		/// <summary>
 		/// 获取指定键的条目。
@@ -118,5 +110,13 @@ namespace Zongsoft.Externals.Redis
 		/// <param name="destination">指定的目的哈希集名称，如果<paramref name="destination"/>哈希集已经存在则将其覆盖，可以指定为当前哈希集。</param>
 		/// <param name="sets">指定的哈希集的名称数组。</param>
 		void SetUnion(string destination, params string[] sets);
+
+		/// <summary>
+		/// 发送一条消息到指定的通道。
+		/// </summary>
+		/// <param name="channel">指定的消息通道。</param>
+		/// <param name="message">要发送的消息。</param>
+		/// <returns>返回接收到信息的订阅者数量。</returns>
+		int Notifiy(string channel, string message);
 	}
 }

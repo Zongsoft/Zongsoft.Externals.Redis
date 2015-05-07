@@ -27,42 +27,32 @@
 using System;
 using System.Collections.Generic;
 
-namespace Zongsoft.Externals.Redis.Commands
+namespace Zongsoft.Externals.Redis
 {
-	public class DictionarySetCommand : RedisCommandBase
+	[Serializable]
+	public class RedisNotificationChannelMessageEventArgs : RedisNotificationChannelEventArgs
 	{
-		#region 构造函数
-		public DictionarySetCommand() : base("Set")
-		{
-		}
+		#region 成员字段
+		private string _message;
+		#endregion
 
-		public DictionarySetCommand(IRedisService redis) : base(redis, "Set")
+		#region 构造函数
+		public RedisNotificationChannelMessageEventArgs(string channel, string message) : base(channel)
 		{
+			_message = message;
 		}
 		#endregion
 
-		#region 执行方法
-		protected override void OnExecute(Services.CommandContext parameter)
+		#region 公共属性
+		/// <summary>
+		/// 获取收到的通知消息文本。
+		/// </summary>
+		public string Message
 		{
-			if(parameter.Arguments.Length < 3)
-				throw new Zongsoft.Services.CommandException("Missing arguments.");
-
-			var dictionary = this.Redis.GetDictionary(parameter.Arguments[0]);
-
-			if(parameter.Arguments.Length == 3)
+			get
 			{
-				dictionary[parameter.Arguments[1]] = parameter.Arguments[2];
-				return;
+				return _message;
 			}
-
-			var items = new KeyValuePair<string, string>[(parameter.Arguments.Length - 1) / 2];
-
-			for(int i = 0; i < items.Length; i++)
-			{
-				items[i] = new KeyValuePair<string,string>(parameter.Arguments[i * 2 + 1], parameter.Arguments[i * 2 + 2]);
-			}
-
-			dictionary.SetRange(items);
 		}
 		#endregion
 	}

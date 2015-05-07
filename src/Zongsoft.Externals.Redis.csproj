@@ -88,12 +88,16 @@
     <Compile Include="RedisDictionary.cs" />
     <Compile Include="RedisEntryType.cs" />
     <Compile Include="RedisException.cs" />
+    <Compile Include="RedisNotification.cs" />
+    <Compile Include="RedisNotificationChannelEventArgs.cs" />
+    <Compile Include="RedisNotificationChannelMessageEventArgs.cs" />
     <Compile Include="RedisObjectBase.cs" />
     <Compile Include="RedisPoolManager.cs" />
     <Compile Include="RedisQueue.cs" />
     <Compile Include="RedisService.cs" />
     <Compile Include="RedisHashset.cs" />
     <Compile Include="RedisSequence.cs" />
+    <Compile Include="RedisServiceSettings.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

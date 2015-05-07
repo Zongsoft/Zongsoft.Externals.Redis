@@ -2,16 +2,16 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
- * This file is part of Zongsoft.CoreLibrary.
+ * This file is part of Zongsoft.Externals.Redis.
  *
- * Zongsoft.CoreLibrary is free software; you can redistribute it and/or
+ * Zongsoft.Externals.Redis is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * Zongsoft.CoreLibrary is distributed in the hope that it will be useful,
+ * Zongsoft.Externals.Redis is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Lesser General Public License for more details.
@@ -20,7 +20,7 @@
  * included in all copies or substantial portions of the Software.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with Zongsoft.CoreLibrary; if not, write to the Free Software
+ * License along with Zongsoft.Externals.Redis; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
@@ -40,9 +40,9 @@ namespace Zongsoft.Externals.Redis
 			_cache = new ConcurrentDictionary<string, Collections.ObjectPool<ServiceStack.Redis.IRedisClient>>();
 		}
 
-		public static Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> GetRedisPool(IPEndPoint address, Func<ServiceStack.Redis.IRedisClient> creator)
+		public static Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> GetRedisPool(IPEndPoint address, int poolSize, Func<ServiceStack.Redis.IRedisClient> creator)
 		{
-			return _cache.GetOrAdd(address.ToString(), new Collections.ObjectPool<ServiceStack.Redis.IRedisClient>(creator, p => p.Dispose(), 16));
+			return _cache.GetOrAdd(address.ToString(), new Collections.ObjectPool<ServiceStack.Redis.IRedisClient>(creator, p => p.Dispose(), Math.Max(poolSize, 16)));
 		}
 	}
 }
