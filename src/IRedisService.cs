@@ -48,7 +48,7 @@ namespace Zongsoft.Externals.Redis
 		IRedisQueue GetQueue(string name);
 		#endregion
 
-		RedisNotification CreateNotification();
+		RedisSubscriber CreateSubscriber();
 
 		/// <summary>
 		/// 获取指定键的条目。
@@ -114,6 +114,6 @@ namespace Zongsoft.Externals.Redis
 		/// <param name="channel">指定的消息通道。</param>
 		/// <param name="message">要发送的消息。</param>
 		/// <returns>返回接收到信息的订阅者数量。</returns>
-		int Notifiy(string channel, string message);
+		int Publish(string channel, string message);
 	}
 }

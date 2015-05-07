@@ -30,14 +30,14 @@ using System.Collections.Generic;
 namespace Zongsoft.Externals.Redis
 {
 	[Serializable]
-	public class RedisNotificationChannelMessageEventArgs : RedisNotificationChannelEventArgs
+	public class RedisChannelMessageEventArgs : RedisChannelEventArgs
 	{
 		#region 成员字段
 		private string _message;
 		#endregion
 
 		#region 构造函数
-		public RedisNotificationChannelMessageEventArgs(string channel, string message) : base(channel)
+		public RedisChannelMessageEventArgs(string channel, string message) : base(channel)
 		{
 			_message = message;
 		}

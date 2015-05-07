@@ -34,13 +34,13 @@ using ServiceStack.Redis;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisNotification : MarshalByRefObject, Zongsoft.Common.IDisposableObject
+	public class RedisSubscriber : MarshalByRefObject, Zongsoft.Common.IDisposableObject
 	{
 		#region 事件定义
 		public event EventHandler<Zongsoft.Common.DisposedEventArgs> Disposed;
-		public event EventHandler<RedisNotificationChannelEventArgs> Subscribed;
-		public event EventHandler<RedisNotificationChannelEventArgs> Unsubscribed;
-		public event EventHandler<RedisNotificationChannelMessageEventArgs> Notified;
+		public event EventHandler<RedisChannelEventArgs> Subscribed;
+		public event EventHandler<RedisChannelEventArgs> Unsubscribed;
+		public event EventHandler<RedisChannelMessageEventArgs> Received;
 		#endregion
 
 		#region 成员字段
@@ -49,18 +49,18 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 构造函数
-		public RedisNotification()
+		public RedisSubscriber()
 		{
 		}
 
-		public RedisNotification(RedisClient redis)
+		public RedisSubscriber(RedisClient redis)
 		{
 			if(redis == null)
 				throw new ArgumentNullException("redis");
 
 			_redis = redis;
 			_redisSubscription = new ServiceStack.Redis.RedisSubscription(_redis);
-			_redisSubscription.OnMessage = this.OnNotified;
+			_redisSubscription.OnMessage = this.OnReceived;
 			_redisSubscription.OnSubscribe = this.OnSubscribed;
 			_redisSubscription.OnUnSubscribe = this.OnUnsubscribed;
 		}
@@ -85,7 +85,7 @@ namespace Zongsoft.Externals.Redis
 
 				var subscription = System.Threading.Interlocked.Exchange(ref _redisSubscription, new ServiceStack.Redis.RedisSubscription(_redis)
 				{
-					OnMessage = this.OnNotified,
+					OnMessage = this.OnReceived,
 					OnSubscribe = this.OnSubscribed,
 					OnUnSubscribe = this.OnUnsubscribed,
 				});
@@ -152,12 +152,12 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 事件处理
-		protected virtual void OnNotified(string channel, string message)
+		protected virtual void OnReceived(string channel, string message)
 		{
-			var handler = this.Notified;
+			var handler = this.Received;
 
 			if(handler != null)
-				handler(this, new RedisNotificationChannelMessageEventArgs(channel, message));
+				handler(this, new RedisChannelMessageEventArgs(channel, message));
 		}
 
 		protected virtual void OnSubscribed(string channel)
@@ -165,7 +165,7 @@ namespace Zongsoft.Externals.Redis
 			var handler = this.Subscribed;
 
 			if(handler != null)
-				handler(this, new RedisNotificationChannelEventArgs(channel));
+				handler(this, new RedisChannelEventArgs(channel));
 		}
 
 		protected virtual void OnUnsubscribed(string channel)
@@ -173,7 +173,7 @@ namespace Zongsoft.Externals.Redis
 			var handler = this.Unsubscribed;
 
 			if(handler != null)
-				handler(this, new RedisNotificationChannelEventArgs(channel));
+				handler(this, new RedisChannelEventArgs(channel));
 		}
 		#endregion
 

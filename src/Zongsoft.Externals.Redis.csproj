@@ -88,9 +88,9 @@
     <Compile Include="RedisDictionary.cs" />
     <Compile Include="RedisEntryType.cs" />
     <Compile Include="RedisException.cs" />
-    <Compile Include="RedisNotification.cs" />
-    <Compile Include="RedisNotificationChannelEventArgs.cs" />
-    <Compile Include="RedisNotificationChannelMessageEventArgs.cs" />
+    <Compile Include="RedisSubscriber.cs" />
+    <Compile Include="RedisChannelEventArgs.cs" />
+    <Compile Include="RedisChannelMessageEventArgs.cs" />
     <Compile Include="RedisObjectBase.cs" />
     <Compile Include="RedisPoolManager.cs" />
     <Compile Include="RedisQueue.cs" />

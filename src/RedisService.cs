@@ -144,9 +144,9 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 公共方法
-		public RedisNotification CreateNotification()
+		public RedisSubscriber CreateSubscriber()
 		{
-			return new RedisNotification(this.CreateProxy());
+			return new RedisSubscriber(this.CreateProxy());
 		}
 
 		public object GetEntry(string key)
@@ -598,7 +598,7 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		public int Notifiy(string channel, string message)
+		public int Publish(string channel, string message)
 		{
 			if(string.IsNullOrWhiteSpace(channel))
 				throw new ArgumentNullException("channel");
