@@ -317,7 +317,10 @@ namespace Zongsoft.Externals.Redis
 					return result;
 				}
 
-				return redis.Set(key, value, expires);
+				if(expires.Year > 2010)
+					return redis.Set(key, value, expires);
+				else
+					return redis.Set(key, value);
 			}
 			finally
 			{
@@ -352,7 +355,10 @@ namespace Zongsoft.Externals.Redis
 					return result;
 				}
 
-				return redis.Set(key, value, duration);
+				if(duration > TimeSpan.Zero)
+					return redis.Set(key, value, duration);
+				else
+					return redis.Set(key, value);
 			}
 			finally
 			{
