@@ -195,7 +195,7 @@ namespace Zongsoft.Externals.Redis
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
-		public void Enqueue<T>(IEnumerable<T> values)
+		public void EnqueueMany<T>(IEnumerable<T> values)
 		{
 			if(values == null)
 				throw new ArgumentNullException("values");
@@ -204,19 +204,12 @@ namespace Zongsoft.Externals.Redis
 
 			if(list == null)
 			{
-				if(typeof(T) == typeof(string))
-				{
-					list = new List<string>((IEnumerable<string>)values);
-				}
-				else
-				{
-					foreach(var value in values)
-					{
-						if(value == null)
-							continue;
+				list = new List<string>();
 
+				foreach(var value in values)
+				{
+					if(value != null)
 						list.Add(this.ConvertValue(value));
-					}
 				}
 			}
 
@@ -361,11 +354,7 @@ namespace Zongsoft.Externals.Redis
 
 			return Zongsoft.Common.Convert.ConvertValue<string>(value, () =>
 			{
-				using(var stream = new MemoryStream())
-				{
-					Zongsoft.Runtime.Serialization.Serializer.Json.Serialize(stream, value);
-					return Encoding.UTF8.GetString(stream.ToArray());
-				}
+				return Zongsoft.Runtime.Serialization.Serializer.Json.Serialize(value);
 			});
 		}
 		#endregion
