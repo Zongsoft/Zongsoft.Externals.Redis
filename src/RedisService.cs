@@ -26,6 +26,7 @@
 
 using System;
 using System.Net;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -34,7 +35,10 @@ using ServiceStack.Redis;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisService : MarshalByRefObject, IRedisService, IDisposable, Zongsoft.Collections.IQueueProvider, Zongsoft.Runtime.Caching.ICache, Zongsoft.Runtime.Caching.ICacheProvider
+	public class RedisService : MarshalByRefObject, IRedisService, IDisposable,
+	                            Zongsoft.Collections.IQueueProvider,
+	                            Zongsoft.Runtime.Caching.ICache,
+	                            Zongsoft.Runtime.Caching.ICacheProvider
 	{
 		#region 成员字段
 		private RedisServiceSettings _settings;
@@ -89,6 +93,14 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 公共属性
+		public string Name
+		{
+			get
+			{
+				return string.Format("{0}[{1}]", _settings.Address, _settings.DatabaseId);
+			}
+		}
+
 		public RedisServiceSettings Settings
 		{
 			get
@@ -376,7 +388,7 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		public void Rename(string oldKey, string newKey)
+		public bool Rename(string oldKey, string newKey)
 		{
 			if(string.IsNullOrWhiteSpace(oldKey))
 				throw new ArgumentNullException("oldKey");
@@ -390,6 +402,14 @@ namespace Zongsoft.Externals.Redis
 			try
 			{
 				redis.RenameKey(oldKey, newKey);
+
+				//返回成功
+				return true;
+			}
+			catch
+			{
+				//返回失败
+				return false;
 			}
 			finally
 			{
@@ -751,13 +771,10 @@ namespace Zongsoft.Externals.Redis
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value)
 		{
-			if(value == null)
-				return this.Remove(key);
-			else
-				return this.SetValue(key, value.ToString());
+			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, TimeSpan.Zero, false);
 		}
 
-		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, bool requiredNotExists, TimeSpan? duration = null)
+		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, TimeSpan duration, bool requiredNotExists = false)
 		{
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException("key");
@@ -765,52 +782,91 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				return this.Remove(key);
 
+			if(value is RedisObjectBase)
+				return false;
+
+			if(!requiredNotExists)
+			{
+				var collection = value as ICollection<string>;
+
+				if(collection != null && collection.Count > 0)
+				{
+					var redisHashset = this.GetHashset(key);
+					var values = new string[collection.Count];
+
+					if(!(collection is string[]))
+					{
+						int index = 0;
+
+						foreach(var item in collection)
+							values[index++] = item;
+					}
+
+					redisHashset.AddRange(values);
+
+					if(duration > TimeSpan.Zero)
+						this.SetEntryExpire(key, duration);
+
+					return true;
+				}
+
+				var dictionary = value as IDictionary;
+
+				if(dictionary != null && dictionary.Count > 0)
+				{
+					var redisDictionary = this.GetDictionary(key);
+
+					foreach(var entryKey in dictionary.Keys)
+					{
+						redisDictionary.Add(entryKey.ToString(), dictionary[entryKey].ToString());
+					}
+
+					if(duration > TimeSpan.Zero)
+						this.SetEntryExpire(key, duration);
+
+					return true;
+				}
+
+				return this.SetValue(key, value.ToString());
+			}
+
 			//获取或创建Redis客户端代理对象
 			var redis = this.Proxy;
 
 			try
 			{
-				if(requiredNotExists)
+				bool result = false;
+
+				using(var transaction = redis.CreateTransaction())
 				{
-					bool result = false;
+					transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value.ToString()), _ => result = _);
 
-					using(var transaction = redis.CreateTransaction())
-					{
-						transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value.ToString()), _ => result = _);
+					if(duration > TimeSpan.Zero)
+						transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
 
-						if(duration.HasValue && duration.Value > TimeSpan.Zero)
-							transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration.Value));
-
-						transaction.Commit();
-					}
-
-					return result;
+					transaction.Commit();
 				}
 
-				if(duration.HasValue && duration.Value > TimeSpan.Zero)
-					redis.SetEntry(key, value.ToString(), duration.Value);
-				else
-					redis.SetEntry(key, value.ToString());
-
-				return true;
+				return result;
 			}
 			finally
 			{
 				_redisPool.Release(redis);
 			}
 		}
-
-		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, TimeSpan duration, bool requiredNotExists = false)
-		{
-			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, requiredNotExists, duration);
-		}
 		#endregion
 
 		#region 获取缓存
-		Zongsoft.Runtime.Caching.ICache Zongsoft.Runtime.Caching.ICacheProvider.GetCache(string name)
+		Zongsoft.Runtime.Caching.ICache Zongsoft.Runtime.Caching.ICacheProvider.GetCache(string name, bool createNotExists = false)
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				return this;
+
+			if(!createNotExists)
+			{
+				if(!this.Exists(name.Trim()))
+					return null;
+			}
 
 			return this.GetDictionary(name.Trim()) as Zongsoft.Runtime.Caching.ICache;
 		}

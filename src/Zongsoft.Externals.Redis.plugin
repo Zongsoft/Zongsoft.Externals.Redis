@@ -44,6 +44,11 @@
 		<queue.queueProvider>{srv:Redis}</queue.queueProvider>
 	</extension>
 
+	<!-- 为安全凭证提供程序设置缓存容器 -->
+	<extension path="/Workspace/Security">
+		<certificationProvider.cache>{srv:Redis}</certificationProvider.cache>
+	</extension>
+
 	<!-- 定义Redis命令的根节点 -->
 	<extension path="/Workbench/CommandExecutor/Commands">
 		<commandNode name="Redis" />

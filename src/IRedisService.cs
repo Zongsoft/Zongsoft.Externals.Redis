@@ -75,7 +75,7 @@ namespace Zongsoft.Externals.Redis
 		void RemoveRange(params string[] keys);
 
 		bool Contains(string key);
-		void Rename(string oldKey, string newKey);
+		bool Rename(string oldKey, string newKey);
 
 		long Increment(string key, int interval = 1);
 		long Decrement(string key, int interval = 1);

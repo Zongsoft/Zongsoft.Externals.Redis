@@ -25,11 +25,12 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisDictionary : RedisObjectBase, IRedisDictionary, Zongsoft.Runtime.Caching.ICache
+	public class RedisDictionary : RedisObjectBase, IRedisDictionary, IDictionary, Zongsoft.Runtime.Caching.ICache
 	{
 		#region 构造函数
 		public RedisDictionary(string name, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> redisPool) : base(name, redisPool)
@@ -352,6 +353,11 @@ namespace Zongsoft.Externals.Redis
 			set;
 		}
 
+		bool Zongsoft.Runtime.Caching.ICache.Rename(string key, string newKey)
+		{
+			throw new NotSupportedException("The cache container isn't supports the feature.");
+		}
+
 		TimeSpan? Zongsoft.Runtime.Caching.ICache.GetDuration(string key)
 		{
 			throw new NotSupportedException("The cache container isn't supports the feature.");
@@ -406,42 +412,7 @@ namespace Zongsoft.Externals.Redis
 
 		public bool SetValue(string key, object value)
 		{
-			var redis = this.Redis;
-
-			try
-			{
-				if(value == null)
-					return redis.RemoveEntryFromHash(this.Name, key);
-				else
-					return redis.SetEntryInHash(this.Name, key, value.ToString());
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
-		}
-
-		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, bool requiredNotExists, TimeSpan? duration = null)
-		{
-			if(duration != null && duration.Value > TimeSpan.Zero)
-				throw new NotSupportedException("The cache container isn't supports the feature.");
-
-			var redis = this.Redis;
-
-			try
-			{
-				if(value == null)
-					return redis.RemoveEntryFromHash(this.Name, key);
-
-				if(requiredNotExists)
-					return redis.SetEntryInHashIfNotExists(this.Name, key, value.ToString());
-				else
-					return redis.SetEntryInHash(this.Name, key, value.ToString());
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, TimeSpan.Zero, false);
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, TimeSpan duration, bool requiredNotExists = false)
@@ -489,9 +460,161 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
+		IDictionaryEnumerator IDictionary.GetEnumerator()
+		{
+			throw new NotSupportedException();
+		}
+
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
 		{
 			return this.GetEnumerator();
+		}
+		#endregion
+
+		#region 字典接口
+		void IDictionary.Add(object key, object value)
+		{
+			if(key == null)
+				throw new ArgumentNullException("key");
+
+			if(value == null)
+				return;
+
+			this.Add(key.ToString(), value.ToString());
+		}
+
+		void IDictionary.Clear()
+		{
+			this.Clear();
+		}
+
+		bool IDictionary.Contains(object key)
+		{
+			if(key == null)
+				throw new ArgumentNullException("key");
+
+			return this.ContainsKey(key.ToString());
+		}
+
+		bool IDictionary.IsFixedSize
+		{
+			get
+			{
+				return false;
+			}
+		}
+
+		bool IDictionary.IsReadOnly
+		{
+			get
+			{
+				return false;
+			}
+		}
+
+		ICollection IDictionary.Keys
+		{
+			get
+			{
+				var entries = this.GetAllEntries();
+
+				if(entries == null)
+					return null;
+
+				var keys = new string[entries.Count];
+				var index = 0;
+
+				foreach(var key in entries.Keys)
+				{
+					keys[index++] = key;
+				}
+
+				return keys;
+			}
+		}
+
+		void IDictionary.Remove(object key)
+		{
+			if(key == null)
+				return;
+
+			this.Remove(key.ToString());
+		}
+
+		ICollection IDictionary.Values
+		{
+			get
+			{
+				var entries = this.GetAllEntries();
+
+				if(entries == null)
+					return null;
+
+				var values = new string[entries.Count];
+				var index = 0;
+
+				foreach(var value in entries.Values)
+				{
+					values[index++] = value;
+				}
+
+				return values;
+			}
+		}
+
+		object IDictionary.this[object key]
+		{
+			get
+			{
+				if(key == null)
+					return null;
+
+				return this[key.ToString()];
+			}
+			set
+			{
+				if(key == null)
+					throw new ArgumentNullException("key");
+
+				if(value == null)
+					this.Remove(key.ToString());
+				else
+					this[key.ToString()] = value.ToString();
+			}
+		}
+
+		void ICollection.CopyTo(Array array, int index)
+		{
+			throw new NotImplementedException();
+		}
+
+		int ICollection.Count
+		{
+			get
+			{
+				return this.Count;
+			}
+		}
+
+		bool ICollection.IsSynchronized
+		{
+			get
+			{
+				return false;
+			}
+		}
+
+		private object _syncRoot;
+
+		object ICollection.SyncRoot
+		{
+			get
+			{
+				if(_syncRoot == null)
+					System.Threading.Interlocked.CompareExchange(ref _syncRoot, new object(), null);
+
+				return _syncRoot;
+			}
 		}
 		#endregion
 	}
