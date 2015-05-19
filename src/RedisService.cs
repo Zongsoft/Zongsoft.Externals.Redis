@@ -690,6 +690,18 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 缓存接口
+		event EventHandler<Runtime.Caching.CacheChangedEventArgs> Runtime.Caching.ICache.Changed
+		{
+			add
+			{
+				throw new NotImplementedException();
+			}
+			remove
+			{
+				throw new NotImplementedException();
+			}
+		}
+
 		long Zongsoft.Runtime.Caching.ICache.Count
 		{
 			get
@@ -792,11 +804,12 @@ namespace Zongsoft.Externals.Redis
 				if(collection != null && collection.Count > 0)
 				{
 					var redisHashset = this.GetHashset(key);
-					var values = new string[collection.Count];
+					string[] values = collection as string[];
 
-					if(!(collection is string[]))
+					if(values == null)
 					{
 						int index = 0;
+						values = new string[collection.Count];
 
 						foreach(var item in collection)
 							values[index++] = item;

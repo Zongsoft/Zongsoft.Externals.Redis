@@ -330,6 +330,18 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 缓存接口
+		event EventHandler<Runtime.Caching.CacheChangedEventArgs> Runtime.Caching.ICache.Changed
+		{
+			add
+			{
+				throw new NotImplementedException();
+			}
+			remove
+			{
+				throw new NotImplementedException();
+			}
+		}
+
 		long Zongsoft.Runtime.Caching.ICache.Count
 		{
 			get
