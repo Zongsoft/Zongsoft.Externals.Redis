@@ -818,7 +818,8 @@ namespace Zongsoft.Externals.Redis
 
 					foreach(var entryKey in dictionary.Keys)
 					{
-						redisDictionary.Add(entryKey.ToString(), dictionary[entryKey].ToString());
+						if(dictionary[entryKey] != null)
+							redisDictionary.Add(entryKey.ToString(), dictionary[entryKey].ToString());
 					}
 
 					if(duration > TimeSpan.Zero)

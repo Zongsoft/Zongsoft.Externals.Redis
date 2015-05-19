@@ -55,6 +55,9 @@ namespace Zongsoft.Externals.Redis
 			_address = address;
 			_password = password;
 			_databaseId = Math.Abs(databaseId);
+
+			if(_address.Port == 0)
+				_address.Port = 6379;
 		}
 		#endregion
 
