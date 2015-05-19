@@ -46,7 +46,7 @@
 
 	<!-- 为安全凭证提供程序设置缓存容器 -->
 	<extension path="/Workspace/Security">
-		<certificationProvider.cache>{srv:Redis}</certificationProvider.cache>
+		<certificationProvider.storage>{srv:Redis}</certificationProvider.storage>
 	</extension>
 
 	<!-- 定义Redis命令的根节点 -->
