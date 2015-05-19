@@ -797,76 +797,55 @@ namespace Zongsoft.Externals.Redis
 			if(value is RedisObjectBase)
 				return false;
 
-			if(!requiredNotExists)
+			var collection = value as ICollection<string>;
+
+			if(collection != null && collection.Count > 0)
 			{
-				var collection = value as ICollection<string>;
+				if(requiredNotExists && this.Exists(key))
+					return false;
 
-				if(collection != null && collection.Count > 0)
+				var redisHashset = this.GetHashset(key);
+				string[] values = collection as string[];
+
+				if(values == null)
 				{
-					var redisHashset = this.GetHashset(key);
-					string[] values = collection as string[];
+					int index = 0;
+					values = new string[collection.Count];
 
-					if(values == null)
-					{
-						int index = 0;
-						values = new string[collection.Count];
-
-						foreach(var item in collection)
-							values[index++] = item;
-					}
-
-					redisHashset.AddRange(values);
-
-					if(duration > TimeSpan.Zero)
-						this.SetEntryExpire(key, duration);
-
-					return true;
+					foreach(var item in collection)
+						values[index++] = item;
 				}
 
-				var dictionary = value as IDictionary;
+				redisHashset.AddRange(values);
 
-				if(dictionary != null && dictionary.Count > 0)
+				if(duration > TimeSpan.Zero)
+					this.SetEntryExpire(key, duration);
+
+				return true;
+			}
+
+			var dictionary = value as IDictionary;
+
+			if(dictionary != null && dictionary.Count > 0)
+			{
+				if(requiredNotExists && this.Exists(key))
+					return false;
+
+				var redisDictionary = this.GetDictionary(key);
+
+				foreach(var entryKey in dictionary.Keys)
 				{
-					var redisDictionary = this.GetDictionary(key);
-
-					foreach(var entryKey in dictionary.Keys)
-					{
-						if(dictionary[entryKey] != null)
-							redisDictionary.Add(entryKey.ToString(), dictionary[entryKey].ToString());
-					}
-
-					if(duration > TimeSpan.Zero)
-						this.SetEntryExpire(key, duration);
-
-					return true;
+					if(dictionary[entryKey] != null)
+						redisDictionary.Add(entryKey.ToString(), dictionary[entryKey].ToString());
 				}
 
-				return this.SetValue(key, value.ToString());
+				if(duration > TimeSpan.Zero)
+					this.SetEntryExpire(key, duration);
+
+				return true;
 			}
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				bool result = false;
-
-				using(var transaction = redis.CreateTransaction())
-				{
-					transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value.ToString()), _ => result = _);
-
-					if(duration > TimeSpan.Zero)
-						transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
-
-					transaction.Commit();
-				}
-
-				return result;
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.SetValue(key, value.ToString(), duration, requiredNotExists);
 		}
 		#endregion
 
