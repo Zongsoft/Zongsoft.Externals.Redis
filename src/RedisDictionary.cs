@@ -30,7 +30,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisDictionary : RedisObjectBase, IRedisDictionary, IDictionary, Zongsoft.Runtime.Caching.ICache
+	public class RedisDictionary : RedisObjectBase, IRedisDictionary, IDictionary, Zongsoft.Common.IAccumulator, Zongsoft.Runtime.Caching.ICache
 	{
 		#region 构造函数
 		public RedisDictionary(string name, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> redisPool) : base(name, redisPool)
