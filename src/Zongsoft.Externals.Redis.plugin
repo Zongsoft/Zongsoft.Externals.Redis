@@ -34,6 +34,12 @@
 		<object name="RedisSequence" value="{path:/Workspace/Externals/RedisSequence}" />
 	</extension>
 
+	<!-- 为文件存储服务指定存储容器 -->
+	<extension path="/Workspace/Services">
+		<storageFile.storage>{srv:Redis}</storageFile.storage>
+		<storageBucket.storage>{srv:Redis}</storageBucket.storage>
+	</extension>
+
 	<!-- 为序号命令指定序号服务程序 -->
 	<extension path="/Workbench/Terminal/Commands">
 		<sequence.sequence>{srv:RedisSequence}</sequence.sequence>
