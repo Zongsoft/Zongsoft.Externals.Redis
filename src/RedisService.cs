@@ -36,6 +36,7 @@ using ServiceStack.Redis;
 namespace Zongsoft.Externals.Redis
 {
 	public class RedisService : MarshalByRefObject, IRedisService, IDisposable,
+	                            Zongsoft.Common.IAccumulator,
 	                            Zongsoft.Collections.IQueueProvider,
 	                            Zongsoft.Runtime.Caching.ICache,
 	                            Zongsoft.Runtime.Caching.ICacheProvider
@@ -93,6 +94,24 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 公共属性
+		public long Count
+		{
+			get
+			{
+				//获取或创建Redis客户端代理对象
+				var redis = this.Proxy;
+
+				try
+				{
+					return redis.DbSize;
+				}
+				finally
+				{
+					_redisPool.Release(redis);
+				}
+			}
+		}
+
 		public string Name
 		{
 			get
@@ -702,14 +721,6 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		long Zongsoft.Runtime.Caching.ICache.Count
-		{
-			get
-			{
-				throw new NotSupportedException("The cache container isn't supports the feature.");
-			}
-		}
-
 		Zongsoft.Runtime.Caching.ICacheCreator Zongsoft.Runtime.Caching.ICache.Creator
 		{
 			get;
@@ -797,9 +808,26 @@ namespace Zongsoft.Externals.Redis
 			if(value is RedisObjectBase)
 				return false;
 
-			var collection = value as ICollection<string>;
+			IEnumerable<KeyValuePair<string, string>> dictionary;
 
-			if(collection != null && collection.Count > 0)
+			if(this.TryGetDictionary(value, out dictionary))
+			{
+				if(requiredNotExists && this.Exists(key))
+					return false;
+
+				var redisDictionary = this.GetDictionary(key);
+
+				redisDictionary.SetRange(dictionary);
+
+				if(duration > TimeSpan.Zero)
+					this.SetEntryExpire(key, duration);
+
+				return true;
+			}
+
+			ICollection<string> collection;
+
+			if(this.TryGetCollection(value, out collection) && collection.Count > 0)
 			{
 				if(requiredNotExists && this.Exists(key))
 					return false;
@@ -824,28 +852,72 @@ namespace Zongsoft.Externals.Redis
 				return true;
 			}
 
+			return this.SetValue(key, value.ToString(), duration, requiredNotExists);
+		}
+
+		private bool TryGetDictionary(object value, out IEnumerable<KeyValuePair<string, string>> result)
+		{
+			result = null;
+
+			if(value == null)
+				return false;
+
+			if(value is IEnumerable<KeyValuePair<string, string>>)
+			{
+				result = (IEnumerable<KeyValuePair<string, string>>)value;
+				return true;
+			}
+
 			var dictionary = value as IDictionary;
 
 			if(dictionary != null && dictionary.Count > 0)
 			{
-				if(requiredNotExists && this.Exists(key))
-					return false;
-
-				var redisDictionary = this.GetDictionary(key);
+				var array = new KeyValuePair<string, string>[dictionary.Count];
+				var index = 0;
 
 				foreach(var entryKey in dictionary.Keys)
 				{
 					if(dictionary[entryKey] != null)
-						redisDictionary.Add(entryKey.ToString(), dictionary[entryKey].ToString());
+						array[index++] = new KeyValuePair<string, string>(entryKey.ToString(), dictionary[entryKey].ToString());
 				}
 
-				if(duration > TimeSpan.Zero)
-					this.SetEntryExpire(key, duration);
-
+				result = array;
 				return true;
 			}
 
-			return this.SetValue(key, value.ToString(), duration, requiredNotExists);
+			return false;
+		}
+
+		private bool TryGetCollection(object value, out ICollection<string> result)
+		{
+			result = null;
+
+			if(value == null)
+				return false;
+
+			if(value is ICollection<string>)
+			{
+				result = (ICollection<string>)value;
+				return true;
+			}
+
+			var collection = value as ICollection;
+
+			if(collection != null && collection.Count > 0)
+			{
+				var array = new string[collection.Count];
+				var index = 0;
+
+				foreach(var item in collection)
+				{
+					array[index++] = item.ToString();
+				}
+
+				result = array;
+				return true;
+			}
+
+			return false;
 		}
 		#endregion
 

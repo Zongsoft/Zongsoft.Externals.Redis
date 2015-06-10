@@ -34,7 +34,15 @@ namespace Zongsoft.Externals.Redis
 	{
 		#region 公共属性
 		/// <summary>
-		/// 获取当前Redis服务的设置参数。
+		/// 获取当前 Redis 服务的记录总数。
+		/// </summary>
+		long Count
+		{
+			get;
+		}
+
+		/// <summary>
+		/// 获取当前 Redis 服务的设置参数。
 		/// </summary>
 		RedisServiceSettings Settings
 		{
