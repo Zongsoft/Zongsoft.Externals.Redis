@@ -25,15 +25,21 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisHashset : RedisObjectBase, IRedisHashset
+	public class RedisHashset : RedisObjectBase, IRedisHashset, ICollection, IList, ICollection<string>
 	{
+		#region 私有变量
+		private readonly object _syncRoot;
+		#endregion
+
 		#region 构造函数
 		public RedisHashset(string name, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> redisPool) : base(name, redisPool)
 		{
+			_syncRoot = new object();
 		}
 		#endregion
 
@@ -296,9 +302,91 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 显式实现
+		bool ICollection.IsSynchronized
+		{
+			get
+			{
+				return true;
+			}
+		}
+
+		object ICollection.SyncRoot
+		{
+			get
+			{
+				return _syncRoot;
+			}
+		}
+
+		void ICollection.CopyTo(Array array, int index)
+		{
+			throw new NotSupportedException();
+		}
+
 		void ICollection<string>.CopyTo(string[] array, int arrayIndex)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
+		}
+
+		int IList.Add(object value)
+		{
+			if(value == null)
+				throw new ArgumentNullException("value");
+
+			this.Add(value.ToString());
+
+			return -1;
+		}
+
+		bool IList.Contains(object value)
+		{
+			if(value == null)
+				return false;
+
+			return this.Contains(value.ToString());
+		}
+
+		int IList.IndexOf(object value)
+		{
+			throw new NotSupportedException();
+		}
+
+		void IList.Insert(int index, object value)
+		{
+			throw new NotSupportedException();
+		}
+
+		void IList.Remove(object value)
+		{
+			if(value == null)
+				return;
+
+			this.Remove(value.ToString());
+		}
+
+		void IList.RemoveAt(int index)
+		{
+			throw new NotSupportedException();
+		}
+
+		bool IList.IsFixedSize
+		{
+			get
+			{
+				return false;
+			}
+		}
+
+		object IList.this[int index]
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+			set
+			{
+				throw new NotSupportedException();
+			}
 		}
 		#endregion
 
