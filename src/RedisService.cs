@@ -872,16 +872,15 @@ namespace Zongsoft.Externals.Redis
 
 			if(dictionary != null && dictionary.Count > 0)
 			{
-				var array = new KeyValuePair<string, string>[dictionary.Count];
-				var index = 0;
+				var items = new List<KeyValuePair<string, string>>(dictionary.Count);
 
 				foreach(var entryKey in dictionary.Keys)
 				{
-					if(dictionary[entryKey] != null)
-						array[index++] = new KeyValuePair<string, string>(entryKey.ToString(), dictionary[entryKey].ToString());
+					if(entryKey != null && dictionary[entryKey] != null)
+						items.Add(new KeyValuePair<string, string>(entryKey.ToString(), dictionary[entryKey].ToString()));
 				}
 
-				result = array;
+				result = items;
 				return true;
 			}
 
@@ -905,15 +904,15 @@ namespace Zongsoft.Externals.Redis
 
 			if(collection != null && collection.Count > 0)
 			{
-				var array = new string[collection.Count];
-				var index = 0;
+				var items = new List<string>(collection.Count);
 
 				foreach(var item in collection)
 				{
-					array[index++] = item.ToString();
+					if(item != null)
+						items.Add(item.ToString());
 				}
 
-				result = array;
+				result = items;
 				return true;
 			}
 
