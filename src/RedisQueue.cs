@@ -195,7 +195,7 @@ namespace Zongsoft.Externals.Redis
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
-		public void EnqueueMany<T>(IEnumerable<T> values)
+		public int EnqueueMany<T>(IEnumerable<T> values)
 		{
 			if(values == null)
 				throw new ArgumentNullException("values");
@@ -226,6 +226,8 @@ namespace Zongsoft.Externals.Redis
 
 			//激发“Enqueued”事件
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(list, true));
+
+			return list.Count;
 		}
 
 		public IEnumerable Peek(int length)
