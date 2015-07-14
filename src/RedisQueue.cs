@@ -175,7 +175,7 @@ namespace Zongsoft.Externals.Redis
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
-		public void Enqueue(object value)
+		public void Enqueue(object value, object settings = null)
 		{
 			if(value == null)
 				throw new ArgumentNullException("value");
@@ -195,7 +195,7 @@ namespace Zongsoft.Externals.Redis
 			this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
-		public int EnqueueMany<T>(IEnumerable<T> values)
+		public int EnqueueMany<T>(IEnumerable<T> values, object settings = null)
 		{
 			if(values == null)
 				throw new ArgumentNullException("values");
