@@ -51,8 +51,10 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 获取集合
-		IRedisHashset GetHashset(string name);
 		IRedisDictionary GetDictionary(string name);
+		IRedisDictionary GetDictionary(string name, IDictionary<string, string> items);
+
+		IRedisHashset GetHashset(string name);
 		IRedisQueue GetQueue(string name);
 		#endregion
 
