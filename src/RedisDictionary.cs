@@ -132,6 +132,9 @@ namespace Zongsoft.Externals.Redis
 		#region 公共方法
 		public void SetRange(IEnumerable<KeyValuePair<string, string>> items)
 		{
+			if(items == null)
+				return;
+
 			var redis = this.Redis;
 
 			try

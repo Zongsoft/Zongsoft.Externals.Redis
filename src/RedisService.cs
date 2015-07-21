@@ -158,19 +158,35 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 获取集合
-		public IRedisHashset GetHashset(string name)
-		{
-			return this.GetCacheEntry(name, RedisEntryType.Set, key => new RedisHashset(key, _redisPool));
-		}
-
 		public IRedisDictionary GetDictionary(string name)
 		{
-			return this.GetCacheEntry(name, RedisEntryType.Dictionary, key => new RedisDictionary(key, _redisPool));
+			return this.GetCacheEntry(name, RedisEntryType.Dictionary, (key, first) => new RedisDictionary(key, _redisPool));
+		}
+
+		public IRedisDictionary GetDictionary(string name, IDictionary<string, string> items)
+		{
+			return this.GetCacheEntry(name, RedisEntryType.Dictionary, (key, first) =>
+			{
+				var result = new RedisDictionary(key, _redisPool);
+
+				if(first && items != null)
+				{
+					foreach(var item in items)
+						result.TryAdd(item.Key, item.Value);
+				}
+
+				return result;
+			});
+		}
+
+		public IRedisHashset GetHashset(string name)
+		{
+			return this.GetCacheEntry(name, RedisEntryType.Set, (key, first) => new RedisHashset(key, _redisPool));
 		}
 
 		public IRedisQueue GetQueue(string name)
 		{
-			return this.GetCacheEntry(name, RedisEntryType.List, key => new RedisQueue(key, _redisPool));
+			return this.GetCacheEntry(name, RedisEntryType.List, (key, first) => new RedisQueue(key, _redisPool));
 		}
 		#endregion
 
@@ -676,7 +692,7 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 私有方法
-		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, T> createThunk) where T : RedisObjectBase
+		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, bool, T> createThunk) where T : RedisObjectBase
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				throw new ArgumentNullException("name");
@@ -696,7 +712,7 @@ namespace Zongsoft.Externals.Redis
 
 			return (T)cache.Get(name, key =>
 			{
-				var redisObject = createThunk(key);
+				var redisObject = createThunk(key, storedEntryType == RedisEntryType.None);
 
 				redisObject.Disposed += (_, __) =>
 				{

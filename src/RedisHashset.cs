@@ -258,8 +258,11 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		public void AddRange(params string[] items)
+		public void AddRange(IEnumerable<string> items)
 		{
+			if(items == null)
+				return;
+
 			var redis = this.Redis;
 
 			try
@@ -270,6 +273,11 @@ namespace Zongsoft.Externals.Redis
 			{
 				this.RedisPool.Release(redis);
 			}
+		}
+
+		public void AddRange(params string[] items)
+		{
+			this.AddRange((IEnumerable<string>)items);
 		}
 
 		public void Clear()
