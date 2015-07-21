@@ -83,9 +83,9 @@ namespace Zongsoft.Externals.Redis
 				return dictionary.Increment("Value");
 		}
 
-		public long GetSequenceNumber(string name, int interval)
+		public long GetSequenceNumber(string name, int interval, int seed = 0)
 		{
-			var dictionary = this.GetRedisDictionary(name);
+			var dictionary = this.GetRedisDictionary(name, interval, seed);
 			return dictionary.Increment("Value", interval);
 		}
 
@@ -104,9 +104,9 @@ namespace Zongsoft.Externals.Redis
 			return this.GetFormattedText(values[1], sequenceNumber);
 		}
 
-		public string GetSequenceString(string name, int interval)
+		public string GetSequenceString(string name, int interval, int seed = 0, string formatString = null)
 		{
-			var dictionary = this.GetRedisDictionary(name);
+			var dictionary = this.GetRedisDictionary(name, interval, seed, formatString);
 			var sequenceNumber = dictionary.Increment("Value", interval);
 
 			return this.GetFormattedText(dictionary["FormatString"], sequenceNumber);
@@ -147,18 +147,28 @@ namespace Zongsoft.Externals.Redis
 
 			var dictionary = this.GetRedisDictionary(name);
 
-			dictionary.SetRange(new KeyValuePair<string, string>[] {
-				new KeyValuePair<string, string>("Value", value.ToString()),
-				new KeyValuePair<string, string>("Interval", interval.ToString()),
-				new KeyValuePair<string, string>("FormatString", formatString ?? string.Empty),
+			dictionary.SetRange(new Dictionary<string, string> {
+				{ "Value", value.ToString() },
+				{ "Interval", interval == 0 ? "1" : interval.ToString() },
+				{ "FormatString", formatString ?? string.Empty },
 			});
 		}
 		#endregion
 
 		#region 私有方法
-		private IRedisDictionary GetRedisDictionary(string name)
+		private IRedisDictionary GetRedisDictionary(string name, int interval = 1, int seed = 0, string formatString = null)
 		{
-			return _redis.GetDictionary(this.GetType().FullName + ":" + name);
+			if(string.IsNullOrWhiteSpace(name))
+				throw new ArgumentNullException("name");
+
+			var key = this.GetType().FullName + ":" + name.Trim();
+
+			return _redis.GetDictionary(key, new Dictionary<string, string>
+			{
+				{ "Value", seed.ToString() },
+				{ "Interval", interval == 0 ? "1" : interval.ToString() },
+				{ "FormatString", formatString ?? string.Empty },
+			});
 		}
 
 		private string GetFormattedText(string formatString, long sequenceNumber)
