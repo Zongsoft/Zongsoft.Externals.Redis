@@ -321,17 +321,20 @@ namespace Zongsoft.Externals.Redis
 			{
 				if(requiredNotExists)
 				{
-					bool result = false;
+					bool result = redis.SetEntryIfNotExists(key, value);
 
-					using(var transaction = redis.CreateTransaction())
-					{
-						transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
+					if(result && duration > TimeSpan.Zero)
+						redis.ExpireEntryIn(key, duration);
 
-						if(duration > TimeSpan.Zero)
-							transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
+					//using(var transaction = redis.CreateTransaction())
+					//{
+					//	transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
 
-						transaction.Commit();
-					}
+					//	if(duration > TimeSpan.Zero)
+					//		transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
+
+					//	transaction.Commit();
+					//}
 
 					return result;
 				}
