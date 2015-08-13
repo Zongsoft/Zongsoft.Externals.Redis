@@ -426,6 +426,24 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
+		public bool SetEntryExpire(string key, DateTime expires)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException("key");
+
+			//获取或创建Redis客户端代理对象
+			var redis = this.Proxy;
+
+			try
+			{
+				return redis.ExpireEntryAt(key, expires);
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
+		}
+
 		public bool Rename(string oldKey, string newKey)
 		{
 			if(string.IsNullOrWhiteSpace(oldKey))
@@ -811,6 +829,42 @@ namespace Zongsoft.Externals.Redis
 			return this.GetEntry(key);
 		}
 
+		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Tuple<object, DateTime>> valueCreator)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException("key");
+
+			if(valueCreator == null)
+				return this.GetEntry(key);
+
+			var redis = this.Proxy;
+
+			try
+			{
+				var result = valueCreator(key);
+
+				if(result == null && result.Item1 == null)
+				{
+					redis.Remove(key);
+					return null;
+				}
+
+				if(redis.SetEntryIfNotExists(key, result.Item1.ToString()))
+				{
+					if(result.Item2 > DateTime.Now)
+						redis.ExpireEntryAt(key, result.Item2);
+
+					return result.Item1;
+				}
+			}
+			finally
+			{
+				_redisPool.Release(redis);
+			}
+
+			return this.GetEntry(key);
+		}
+
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value)
 		{
 			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, TimeSpan.Zero, false);
@@ -872,6 +926,64 @@ namespace Zongsoft.Externals.Redis
 			}
 
 			return this.SetValue(key, value.ToString(), duration, requiredNotExists);
+		}
+
+		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, DateTime expires, bool requiredNotExists = false)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException("key");
+
+			if(value == null)
+				return this.Remove(key);
+
+			if(value is RedisObjectBase)
+				return false;
+
+			IEnumerable<KeyValuePair<string, string>> dictionary;
+
+			if(this.TryGetDictionary(value, out dictionary))
+			{
+				if(requiredNotExists && this.Exists(key))
+					return false;
+
+				var redisDictionary = this.GetDictionary(key);
+
+				redisDictionary.SetRange(dictionary);
+
+				if(expires > DateTime.Now)
+					this.SetEntryExpire(key, expires);
+
+				return true;
+			}
+
+			ICollection<string> collection;
+
+			if(this.TryGetCollection(value, out collection) && collection.Count > 0)
+			{
+				if(requiredNotExists && this.Exists(key))
+					return false;
+
+				var redisHashset = this.GetHashset(key);
+				string[] values = collection as string[];
+
+				if(values == null)
+				{
+					int index = 0;
+					values = new string[collection.Count];
+
+					foreach(var item in collection)
+						values[index++] = item;
+				}
+
+				redisHashset.AddRange(values);
+
+				if(expires > DateTime.Now)
+					this.SetEntryExpire(key, expires);
+
+				return true;
+			}
+
+			return this.SetValue(key, value.ToString(), (expires - DateTime.Now), requiredNotExists);
 		}
 
 		private bool TryGetDictionary(object value, out IEnumerable<KeyValuePair<string, string>> result)

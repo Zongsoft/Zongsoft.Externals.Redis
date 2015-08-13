@@ -388,16 +388,51 @@ namespace Zongsoft.Externals.Redis
 			var creator = ((Zongsoft.Runtime.Caching.ICache)this).Creator;
 
 			if(creator == null)
-				return ((Zongsoft.Runtime.Caching.ICache)this).GetValue(key, null);
-			else
-				return ((Zongsoft.Runtime.Caching.ICache)this).GetValue(key, _ =>
-				{
-					TimeSpan duration;
-					return new Tuple<object, TimeSpan>(creator.Create(this.Name, _, out duration), duration);
-				});
+			{
+				string result;
+
+				if(this.TryGetValue(key, out result))
+					return result;
+
+				return null;
+			}
+
+			return ((Zongsoft.Runtime.Caching.ICache)this).GetValue(key, _ =>
+			{
+				TimeSpan duration;
+				return new Tuple<object, TimeSpan>(creator.Create(this.Name, _, out duration), duration);
+			});
 		}
 
 		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Tuple<object, TimeSpan>> valueCreator)
+		{
+			var redis = this.Redis;
+
+			try
+			{
+				if(valueCreator == null)
+					return redis.GetValueFromHash(this.Name, key);
+
+				var result = valueCreator(key);
+
+				if(result == null && result.Item1 == null)
+				{
+					redis.RemoveEntryFromHash(this.Name, key);
+					return null;
+				}
+
+				if(redis.SetEntryInHashIfNotExists(this.Name, key, result.Item1.ToString()))
+					return result.Item1;
+
+				return redis.GetValueFromHash(this.Name, key);
+			}
+			finally
+			{
+				this.RedisPool.Release(redis);
+			}
+		}
+
+		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Tuple<object, DateTime>> valueCreator)
 		{
 			var redis = this.Redis;
 
@@ -451,6 +486,14 @@ namespace Zongsoft.Externals.Redis
 			{
 				this.RedisPool.Release(redis);
 			}
+		}
+
+		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, DateTime expires, bool requiredNotExists = false)
+		{
+			if(expires > DateTime.Now)
+				throw new NotSupportedException("The cache container isn't supports the feature.");
+
+			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, TimeSpan.Zero, requiredNotExists);
 		}
 		#endregion
 
