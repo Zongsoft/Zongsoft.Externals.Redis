@@ -779,6 +779,11 @@ namespace Zongsoft.Externals.Redis
 			this.SetEntryExpire(key, duration);
 		}
 
+		T Zongsoft.Runtime.Caching.ICache.GetValue<T>(string key)
+		{
+			return Utility.ConvertValue<T>(((Zongsoft.Runtime.Caching.ICache)this).GetValue(key));
+		}
+
 		object Zongsoft.Runtime.Caching.ICache.GetValue(string key)
 		{
 			var creator = ((Zongsoft.Runtime.Caching.ICache)this).Creator;
@@ -925,7 +930,7 @@ namespace Zongsoft.Externals.Redis
 				return true;
 			}
 
-			return this.SetValue(key, value.ToString(), duration, requiredNotExists);
+			return this.SetValue(key, Utility.GetStoreString(value), duration, requiredNotExists);
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, DateTime expires, bool requiredNotExists = false)
@@ -983,7 +988,7 @@ namespace Zongsoft.Externals.Redis
 				return true;
 			}
 
-			return this.SetValue(key, value.ToString(), (expires - DateTime.Now), requiredNotExists);
+			return this.SetValue(key, Utility.GetStoreString(value), (expires - DateTime.Now), requiredNotExists);
 		}
 
 		private bool TryGetDictionary(object value, out IEnumerable<KeyValuePair<string, string>> result)

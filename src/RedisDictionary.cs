@@ -404,6 +404,11 @@ namespace Zongsoft.Externals.Redis
 			});
 		}
 
+		T Zongsoft.Runtime.Caching.ICache.GetValue<T>(string key)
+		{
+			return Utility.ConvertValue<T>(((Zongsoft.Runtime.Caching.ICache)this).GetValue(key));
+		}
+
 		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Tuple<object, TimeSpan>> valueCreator)
 		{
 			var redis = this.Redis;
@@ -478,9 +483,9 @@ namespace Zongsoft.Externals.Redis
 					return redis.RemoveEntryFromHash(this.Name, key);
 
 				if(requiredNotExists)
-					return redis.SetEntryInHashIfNotExists(this.Name, key, value.ToString());
+					return redis.SetEntryInHashIfNotExists(this.Name, key, Utility.GetStoreString(value));
 				else
-					return redis.SetEntryInHash(this.Name, key, value.ToString());
+					return redis.SetEntryInHash(this.Name, key, Utility.GetStoreString(value));
 			}
 			finally
 			{

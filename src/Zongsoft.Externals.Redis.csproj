@@ -98,6 +98,7 @@
     <Compile Include="RedisHashset.cs" />
     <Compile Include="RedisSequence.cs" />
     <Compile Include="RedisServiceSettings.cs" />
+    <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
