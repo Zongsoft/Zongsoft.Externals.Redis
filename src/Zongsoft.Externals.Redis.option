@@ -5,6 +5,7 @@
 		<default default.type="Zongsoft.Externals.Redis.Configuration.RedisConfigurationElement, Zongsoft.Externals.Redis"
 		         name="localhost"
 		         address="127.0.0.1"
+		         password=""
 		         poolSize="64" />
 	</option>
 </options>
