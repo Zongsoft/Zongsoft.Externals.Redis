@@ -33,6 +33,9 @@
 		<!-- 将Redis作为默认的缓存容器挂载到默认服务容器中 -->
 		<object name="Storage" value="{path:/Workspace/Externals/Redis}" />
 
+		<!-- 将RedisSequence作为默认的序号器挂载到默认服务容器中 -->
+		<object name="Sequence" value="{path:/Workspace/Externals/RedisSequence}" />
+
 		<object name="Redis" value="{path:/Workspace/Externals/Redis}" />
 		<object name="RedisSequence" value="{path:/Workspace/Externals/RedisSequence}" />
 	</extension>
