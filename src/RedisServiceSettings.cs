@@ -53,7 +53,7 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("address");
 
 			_address = address;
-			_password = password;
+			_password = string.IsNullOrEmpty(password) ? null : password;
 			_databaseId = Math.Abs(databaseId);
 
 			if(_address.Port == 0)
