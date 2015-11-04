@@ -23,7 +23,8 @@
 
 		<object name="RedisSequence" type="Zongsoft.Externals.Redis.RedisSequence, Zongsoft.Externals.Redis">
 			<object.constructor>
-				<parameter type="Zongsoft.Externals.Redis.RedisService, Zongsoft.Externals.Redis" value="{srv:Redis}"/>
+				<parameter type="Zongsoft.Externals.Redis.RedisService, Zongsoft.Externals.Redis"
+				           value="{path:../Redis}"/>
 			</object.constructor>
 		</object>
 	</extension>
