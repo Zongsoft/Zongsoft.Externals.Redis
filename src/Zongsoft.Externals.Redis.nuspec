@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package>
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <licenseUrl>http://www.gnu.org/licenses/lgpl-2.1.html</licenseUrl>
+    <projectUrl>https://github.com/Zongsoft/Zongsoft.Externals.Redis</projectUrl>
+    <iconUrl>https://avatars.githubusercontent.com/u/4804332</iconUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>$description$</description>
+    <summary>关于 Redis 操作的常用命令集。</summary>
+    <releaseNotes>关于 Redis 操作的常用命令集。</releaseNotes>
+    <copyright>$copyright$</copyright>
+    <tags>Zongsoft External Redis Cache</tags>
+    <dependencies>
+        <dependency id="Zongsoft.CoreLibrary" version="4.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="Zongsoft.Externals.Redis.option" target="content\plugins\Zongsoft.Externals\Redis\" />
+    <file src="Zongsoft.Externals.Redis.plugin" target="content\plugins\Zongsoft.Externals\Redis\" />
+    <file src="bin\$configuration$\Zongsoft.Externals.Redis.dll" target="content\plugins\Zongsoft.Externals\Redis\" />
+  </files>
+</package>
