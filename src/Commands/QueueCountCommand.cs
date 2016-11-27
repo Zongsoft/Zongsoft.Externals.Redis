@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -42,25 +42,22 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override void OnExecute(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext context)
 		{
-			if(context.Arguments.Length < 1)
+			if(context.Expression.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(context.Arguments.Length == 1)
-			{
-				context.Result = this.Redis.GetHashset(context.Arguments[0]).Count;
-				return;
-			}
+			if(context.Expression.Arguments.Length == 1)
+				return this.Redis.GetHashset(context.Expression.Arguments[0]).Count;
 
-			var result = new long[context.Arguments.Length];
+			var result = new long[context.Expression.Arguments.Length];
 
 			for(int i = 0; i < result.Length; i++)
 			{
-				result[i] = this.Redis.GetQueue(context.Arguments[i]).Count;
+				result[i] = this.Redis.GetQueue(context.Expression.Arguments[i]).Count;
 			}
 
-			context.Result = result;
+			return result;
 		}
 		#endregion
 	}

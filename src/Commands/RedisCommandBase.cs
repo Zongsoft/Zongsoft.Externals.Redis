@@ -35,17 +35,8 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 构造函数
-		protected RedisCommandBase()
-		{
-		}
-
 		protected RedisCommandBase(string name) : base(name)
 		{
-		}
-
-		protected RedisCommandBase(IRedisService redis)
-		{
-			_redis = redis;
 		}
 
 		protected RedisCommandBase(IRedisService redis, string name) : base(name)

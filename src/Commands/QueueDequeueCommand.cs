@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -30,7 +30,7 @@ using System.Linq;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	[Zongsoft.Services.CommandOption("length", Type = typeof(int), DefaultValue = 1)]
+	[Zongsoft.Services.CommandOption("count", Type = typeof(int), DefaultValue = 1)]
 	public class QueueDequeueCommand : RedisCommandBase
 	{
 		#region 构造函数
@@ -44,35 +44,32 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override void OnExecute(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext context)
 		{
-			if(context.Arguments.Length < 1)
+			if(context.Expression.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			var length = (int)context.Options["length"];
+			var count = context.Expression.Options.GetValue<int>("count");
 
-			if(context.Arguments.Length == 1)
+			if(context.Expression.Arguments.Length == 1)
+				return this.Redis.GetQueue(context.Expression.Arguments[0]).Dequeue(count);
+
+			var result = new string[context.Expression.Arguments.Length * count];
+
+			for(int i = 0; i < context.Expression.Arguments.Length; i++)
 			{
-				context.Result = this.Redis.GetQueue(context.Arguments[0]).Dequeue(length);
-				return;
-			}
-
-			var result = new string[context.Arguments.Length * length];
-
-			for(int i = 0; i < context.Arguments.Length; i++)
-			{
-				var queue = this.Redis.GetQueue(context.Arguments[i]);
-				var items = queue.Dequeue(length);
+				var queue = this.Redis.GetQueue(context.Expression.Arguments[i]);
+				var items = queue.Dequeue(count);
 
 				int j = 0;
 
 				foreach(var item in items)
 				{
-					result[i * context.Arguments.Length + j++] = (string)item;
+					result[i * context.Expression.Arguments.Length + j++] = (string)item;
 				}
 			}
 
-			context.Result = result;
+			return result;
 		}
 		#endregion
 	}

@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -45,32 +45,28 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override void OnExecute(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext context)
 		{
-			if(context.Arguments.Length < 1)
+			if(context.Expression.Arguments.Length < 1)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			var dictionary = this.Redis.GetDictionary(context.Arguments[0]);
+			var dictionary = this.Redis.GetDictionary(context.Expression.Arguments[0]);
 
-			switch(context.Arguments.Length)
+			switch(context.Expression.Arguments.Length)
 			{
 				case 1:
-					if(context.Options.Contains("all"))
-					{
-						context.Result = (IEnumerable<KeyValuePair<string, string>>)dictionary;
-						return;
-					}
+					if(context.Expression.Options.Contains("all"))
+						return dictionary;
 
 					throw new Zongsoft.Services.CommandException("Missing arguments.");
 				case 2:
-					context.Result = dictionary[context.Arguments[1]];
-					return;
+					return dictionary[context.Expression.Arguments[1]];
 			}
 
-			var keys = new string[context.Arguments.Length - 1];
-			Array.Copy(context.Arguments, 1, keys, 0, keys.Length);
+			var keys = new string[context.Expression.Arguments.Length - 1];
+			Array.Copy(context.Expression.Arguments, 1, keys, 0, keys.Length);
 
-			context.Result = dictionary.GetValues(keys);
+			return dictionary.GetValues(keys);
 		}
 		#endregion
 	}

@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -43,27 +43,24 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override void OnExecute(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext context)
 		{
-			if(context.Arguments.Length < 1)
+			if(context.Expression.Arguments.Length < 1)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			int interval = (int)context.Options["interval"];
+			int interval = context.Expression.Options.GetValue<int>("interval");
 
-			if(context.Arguments.Length == 1)
+			if(context.Expression.Arguments.Length == 1)
+				return this.Redis.Increment(context.Expression.Arguments[0], interval);
+
+			var result = new long[context.Expression.Arguments.Length];
+
+			for(int i = 0; i < context.Expression.Arguments.Length; i++)
 			{
-				context.Result = this.Redis.Increment(context.Arguments[0], interval);
-				return;
+				result[i] = this.Redis.Increment(context.Expression.Arguments[i], interval);
 			}
 
-			var result = new long[context.Arguments.Length];
-
-			for(int i = 0; i < context.Arguments.Length; i++)
-			{
-				result[i] = this.Redis.Increment(context.Arguments[i], interval);
-			}
-
-			context.Result = result;
+			return result;
 		}
 		#endregion
 	}

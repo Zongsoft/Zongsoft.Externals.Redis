@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -44,24 +44,21 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override void OnExecute(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext context)
 		{
-			if(context.Arguments.Length < 2)
+			if(context.Expression.Arguments.Length < 2)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			if(context.Options.Contains("duration") && context.Options.Contains("expires"))
+			if(context.Expression.Options.Contains("duration") && context.Expression.Options.Contains("expires"))
 				throw new Zongsoft.Services.CommandOptionException("duration, expires");
 
-			var notExists = context.Options.Contains("not") || context.Options.Contains("notExists");
+			var notExists = context.Expression.Options.Contains("not") || context.Expression.Options.Contains("notExists");
 
 			TimeSpan duration;
-			if(context.Options.TryGetValue<TimeSpan>("duration", out duration) && duration > TimeSpan.Zero)
-			{
-				context.Result = this.Redis.SetValue(context.Arguments[0], context.Arguments[1], duration, notExists);
-				return;
-			}
+			if(context.Expression.Options.TryGetValue<TimeSpan>("duration", out duration) && duration > TimeSpan.Zero)
+				return this.Redis.SetValue(context.Expression.Arguments[0], context.Expression.Arguments[1], duration, notExists);
 
-			context.Result = this.Redis.SetValue(context.Arguments[0], context.Arguments[1], TimeSpan.Zero, notExists);
+			return this.Redis.SetValue(context.Expression.Arguments[0], context.Expression.Arguments[1], TimeSpan.Zero, notExists);
 		}
 		#endregion
 	}

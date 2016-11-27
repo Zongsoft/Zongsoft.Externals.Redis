@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -42,15 +42,17 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override void OnExecute(Services.CommandContext context)
+		protected override object OnExecute(Services.CommandContext context)
 		{
-			if(context.Arguments.Length < 1)
+			if(context.Expression.Arguments.Length < 1)
 				throw new Zongsoft.Services.CommandException("Invalid arguments of command.");
 
-			if(context.Arguments.Length == 1)
-				context.Result = this.Redis.Remove(context.Arguments[0]);
+			if(context.Expression.Arguments.Length == 1)
+				this.Redis.Remove(context.Expression.Arguments[0]);
 			else
-				this.Redis.RemoveRange(context.Arguments);
+				this.Redis.RemoveRange(context.Expression.Arguments);
+
+			return null;
 		}
 		#endregion
 	}
