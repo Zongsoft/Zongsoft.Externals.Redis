@@ -42,17 +42,17 @@
 	</extension>
 
 	<!-- 为队列命令指定队列提供程序 -->
-	<extension path="/Workbench/Terminal/Commands/Collections">
+	<extension path="/Workbench/Executor/Commands/Collections">
 		<queue.queueProvider>{srv:Redis}</queue.queueProvider>
 	</extension>
 
 	<!-- 定义Redis命令的根节点 -->
-	<extension path="/Workbench/CommandExecutor/Commands">
+	<extension path="/Workbench/Executor/Commands">
 		<commandNode name="Redis" />
 	</extension>
 
 	<!-- 定义常用的Redis命令集 -->
-	<extension path="/Workbench/CommandExecutor/Commands/Redis">
+	<extension path="/Workbench/Executor/Commands/Redis">
 		<object name="Get" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.GetCommand, Zongsoft.Externals.Redis" />
 		<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.SetCommand, Zongsoft.Externals.Redis" />
 		<object name="Remove" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.RemoveCommand, Zongsoft.Externals.Redis" />
@@ -60,8 +60,8 @@
 		<object name="Decrement" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DecrementCommand, Zongsoft.Externals.Redis" />
 
 		<commandNode name="Queue">
-			<object name="Dequeue" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueDequeueCommand, Zongsoft.Externals.Redis" />
-			<object name="Enqueue" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueEnqueueCommand, Zongsoft.Externals.Redis" />
+			<object name="In" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueEnqueueCommand, Zongsoft.Externals.Redis" />
+			<object name="Out" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueDequeueCommand, Zongsoft.Externals.Redis" />
 			<object name="Count" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueCountCommand, Zongsoft.Externals.Redis" />
 			<object name="Clear" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueClearCommand, Zongsoft.Externals.Redis" />
 			<object name="Take" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueTakeCommand, Zongsoft.Externals.Redis" />
