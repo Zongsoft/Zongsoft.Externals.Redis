@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -25,13 +25,13 @@
  */
 
 using System;
-using System.Net;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
 
-using ServiceStack.Redis;
+using StackExchange.Redis;
 
 namespace Zongsoft.Externals.Redis
 {
@@ -42,54 +42,29 @@ namespace Zongsoft.Externals.Redis
 	                            Zongsoft.Runtime.Caching.ICacheProvider
 	{
 		#region 成员字段
-		private RedisServiceSettings _settings;
-		private Zongsoft.Collections.ObjectPool<IRedisClient> _redisPool;
+		private readonly object _syncRoot;
+		private readonly ConfigurationOptions _setting;
 		private ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<RedisObjectBase>> _caches;
+		private IConnectionMultiplexer _redis;
+		private IDatabase _database;
+		private RedisSubscriber _subscriber;
+		private bool _isDisposed;
 		#endregion
 
 		#region 构造函数
 		public RedisService()
 		{
-			_settings = new RedisServiceSettings();
-			_redisPool = RedisPoolManager.GetRedisPool(_settings.Address, _settings.PoolSize, this.CreateProxy);
+			_setting = ConfigurationOptions.Parse("127.0.0.1");
+			_syncRoot = new object();
 		}
 
-		public RedisService(IPEndPoint address, string password = null, int databaseId = 0)
+		public RedisService(string connectionString)
 		{
-			_settings = new RedisServiceSettings(address, password, databaseId);
-			_redisPool = RedisPoolManager.GetRedisPool(_settings.Address, _settings.PoolSize, this.CreateProxy);
-		}
+			if(string.IsNullOrWhiteSpace(connectionString))
+				connectionString = "127.0.0.1";
 
-		public RedisService(RedisServiceSettings settings)
-		{
-			if(settings == null)
-				throw new ArgumentNullException("settings");
-
-			_settings = settings;
-			_redisPool = RedisPoolManager.GetRedisPool(_settings.Address, _settings.PoolSize, this.CreateProxy);
-		}
-
-		public RedisService(Configuration.RedisConfigurationElement config)
-		{
-			if(config == null)
-			{
-				_settings = new RedisServiceSettings();
-			}
-			else
-			{
-				var address = Zongsoft.Communication.IPEndPointConverter.Parse(config.Address);
-
-				if(address.Port == 0)
-					address.Port = 6379;
-
-				_settings = new RedisServiceSettings(address, config.Password, config.DatabaseId)
-				{
-					PoolSize = config.PoolSize,
-					Timeout = config.Timeout,
-				};
-			}
-
-			_redisPool = RedisPoolManager.GetRedisPool(_settings.Address, _settings.PoolSize, this.CreateProxy);
+			_setting = ConfigurationOptions.Parse(connectionString);
+			_syncRoot = new object();
 		}
 		#endregion
 
@@ -98,17 +73,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				//获取或创建Redis客户端代理对象
-				var redis = this.Proxy;
-
-				try
-				{
-					return redis.DbSize;
-				}
-				finally
-				{
-					_redisPool.Release(redis);
-				}
+				return -1;
 			}
 		}
 
@@ -116,22 +81,34 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return string.Format("{0}[{1}]", _settings.Address, _settings.DatabaseId);
-			}
-		}
+				string addresses = string.Empty;
 
-		public RedisServiceSettings Settings
-		{
-			get
-			{
-				return _settings;
-			}
-			set
-			{
-				if(value == null)
-					throw new ArgumentNullException();
+				if(_setting.EndPoints.Count > 1)
+				{
+					foreach(var endPoint in _setting.EndPoints)
+					{
+						if(string.IsNullOrEmpty(addresses))
+							addresses += ", ";
 
-				_settings = value;
+						addresses += endPoint.ToString();
+					}
+
+					addresses = "[" + addresses + "]";
+				}
+				else
+				{
+					addresses = _setting.EndPoints[0].ToString();
+				}
+
+				var databaseId = _setting.DefaultDatabase ?? 0;
+
+				if(_database != null)
+					databaseId = _database.Database;
+
+				if(_setting.Proxy == Proxy.None)
+					return addresses + "#" + databaseId;
+				else
+					return $"({_setting.Proxy}){addresses}#{databaseId}";
 			}
 		}
 
@@ -139,20 +116,60 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return _redisPool == null;
+				return _isDisposed;
 			}
 		}
 
-		protected ServiceStack.Redis.IRedisClient Proxy
+		public StackExchange.Redis.ConfigurationOptions Settings
 		{
 			get
 			{
-				var redisPool = _redisPool;
+				return _setting;
+			}
+		}
 
-				if(redisPool == null)
-					throw new ObjectDisposedException("RedisPool");
+		protected RedisSubscriber Subscriber
+		{
+			get
+			{
+				if(_subscriber == null)
+					_subscriber = new RedisSubscriber(this.Redis.GetSubscriber());
 
-				return redisPool.GetObject();
+				return _subscriber;
+			}
+		}
+
+		protected StackExchange.Redis.IDatabase Database
+		{
+			get
+			{
+				if(_database == null)
+					_database = this.Redis.GetDatabase();
+
+				return _database;
+			}
+		}
+
+		protected StackExchange.Redis.IConnectionMultiplexer Redis
+		{
+			get
+			{
+				if(_isDisposed)
+					throw new ObjectDisposedException(nameof(RedisService));
+
+				if(_redis == null)
+				{
+					lock(_syncRoot)
+					{
+						if(_isDisposed)
+							throw new ObjectDisposedException(nameof(RedisService));
+
+						if(_redis == null)
+							_redis = ConnectionMultiplexer.Connect(_setting);
+					}
+				}
+
+				return _redis;
 			}
 		}
 		#endregion
@@ -191,13 +208,30 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 公共方法
+		public bool Use(int databaseId)
+		{
+			if(databaseId < 0)
+				return false;
+
+			var database = this.Redis.GetDatabase(databaseId);
+
+			if(database != null)
+				_database = database;
+
+			return database != null;
+		}
+
 		public RedisSubscriber CreateSubscriber()
 		{
+			this.Redis.GetSubscriber();
 			return new RedisSubscriber(this.CreateProxy());
 		}
 
 		public object GetEntry(string key)
 		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
 			var entryType = this.GetEntryType(key);
 
 			switch(entryType)
@@ -219,264 +253,125 @@ namespace Zongsoft.Externals.Redis
 		public string GetValue(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.GetValue(key);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.StringGet(key);
 		}
 
 		public IEnumerable<string> GetValues(params string[] keys)
 		{
 			if(keys == null || keys.Length == 0)
-				throw new ArgumentNullException("keys");
+				throw new ArgumentNullException(nameof(keys));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.GetValues(System.Linq.Enumerable.ToList(keys));
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.StringGet(keys.Cast<RedisKey>().ToArray()).Cast<string>();
 		}
 
 		public string ExchangeValue(string key, string value)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.GetAndSetEntry(key, value);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.StringGetSet(key, value);
 		}
 
 		public string ExchangeValue(string key, string value, TimeSpan duration)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
+			//尝试获取指定键的条目值
+			string result = this.Database.StringGet(key);
 
-			//定义Redis事务变量
-			IRedisTransaction transaction = null;
-
-			try
-			{
-				string result = null;
-
-				//创建一个Redis事务
-				transaction = redis.CreateTransaction();
-
-				transaction.QueueCommand(proxy => proxy.GetAndSetEntry(key, value), s => result = s);
-				transaction.QueueCommand(proxy => proxy.ExpireEntryIn(key, duration));
-
-				transaction.Commit();
-
+			//如果指定的键存在则返回它
+			if(result != null)
 				return result;
-			}
-			finally
-			{
-				if(transaction != null)
-					transaction.Dispose();
 
-				_redisPool.Release(redis);
-			}
+			//设置指定的键值对并附加指定的有效期
+			return this.Database.StringSet(key, value, duration, When.NotExists) ? value : null;
 		}
 
 		public bool SetValue(string key, string value)
 		{
-			return this.SetValue(key, value, TimeSpan.Zero);
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			return this.Database.StringSet(key, value);
 		}
 
 		public bool SetValue(string key, string value, TimeSpan duration, bool requiredNotExists = false)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				if(requiredNotExists)
-				{
-					bool result = redis.SetEntryIfNotExists(key, value);
-
-					if(result && duration > TimeSpan.Zero)
-						redis.ExpireEntryIn(key, duration);
-
-					//using(var transaction = redis.CreateTransaction())
-					//{
-					//	transaction.QueueCommand(proxy => proxy.SetEntryIfNotExists(key, value), b => result = b);
-
-					//	if(duration > TimeSpan.Zero)
-					//		transaction.QueueCommand(proxy => redis.ExpireEntryIn(key, duration));
-
-					//	transaction.Commit();
-					//}
-
-					return result;
-				}
-
-				if(duration > TimeSpan.Zero)
-					redis.SetEntry(key, value, duration);
-				else
-					redis.SetEntry(key, value);
-
-				return true;
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.StringSet(key, value, duration, requiredNotExists ? When.NotExists : When.Always);
 		}
 
 		public RedisEntryType GetEntryType(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			//设置默认返回值
-			var entryType = RedisKeyType.None;
-
-			try
-			{
-				//获取Redis条目类型
-				entryType = redis.GetEntryType(key);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			//获取Redis条目类型
+			var entryType = this.Database.KeyType(key);
 
 			switch(entryType)
 			{
-				case RedisKeyType.Hash:
+				case RedisType.Hash:
 					return RedisEntryType.Dictionary;
-				case RedisKeyType.List:
+				case RedisType.List:
 					return RedisEntryType.List;
-				case RedisKeyType.Set:
+				case RedisType.Set:
 					return RedisEntryType.Set;
-				case RedisKeyType.SortedSet:
+				case RedisType.SortedSet:
 					return RedisEntryType.SortedSet;
-				case RedisKeyType.String:
+				case RedisType.String:
 					return RedisEntryType.String;
 			}
 
 			return RedisEntryType.None;
 		}
 
-		public TimeSpan GetEntryExpire(string key)
+		public TimeSpan? GetEntryExpire(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.GetTimeToLive(key);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.StringGetWithExpiry(key).Expiry;
 		}
 
 		public bool SetEntryExpire(string key, TimeSpan duration)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.ExpireEntryIn(key, duration);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.KeyExpire(key, duration);
 		}
 
 		public bool SetEntryExpire(string key, DateTime expires)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.ExpireEntryAt(key, expires);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.KeyExpire(key, expires);
 		}
 
 		public bool Rename(string oldKey, string newKey)
 		{
 			if(string.IsNullOrWhiteSpace(oldKey))
-				throw new ArgumentNullException("oldKey");
+				throw new ArgumentNullException(nameof(oldKey));
 
 			if(string.IsNullOrWhiteSpace(newKey))
-				throw new ArgumentNullException("newKey");
+				throw new ArgumentNullException(nameof(newKey));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				redis.RenameKey(oldKey, newKey);
-
-				//返回成功
-				return true;
-			}
-			catch
-			{
-				//返回失败
-				return false;
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.KeyRename(oldKey, newKey, When.Exists);
 		}
 
 		public void Clear()
 		{
+			this.Redis.GetServer().FlushDatabaseAsync(this.Database.Database);
+
 			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
+			var redis = this.Redis;
 
 			try
 			{
@@ -491,208 +386,92 @@ namespace Zongsoft.Externals.Redis
 		public bool Remove(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.Remove(key);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.KeyDelete(key);
 		}
 
-		public void RemoveRange(params string[] keys)
+		public void RemoveMany(params string[] keys)
 		{
 			if(keys == null || keys.Length == 0)
-				throw new ArgumentNullException("keys");
+				throw new ArgumentNullException(nameof(keys));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				redis.RemoveAll(keys);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			this.Database.KeyDelete(keys.Cast<RedisKey>().ToArray());
 		}
 
 		public bool Contains(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.ContainsKey(key);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.KeyExists(key);
 		}
 
 		public bool Exists(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.ContainsKey(key);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.KeyExists(key);
 		}
 
 		public long Increment(string key, int interval = 1)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				if(interval == 1)
-					return redis.IncrementValue(key);
-				else
-					return redis.IncrementValueBy(key, interval);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.StringIncrement(key, interval);
 		}
 
 		public long Decrement(string key, int interval = 1)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				if(interval == 1)
-					return redis.DecrementValue(key);
-				else
-					return redis.DecrementValueBy(key, interval);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.StringDecrement(key, interval);
 		}
 
 		public HashSet<string> GetIntersect(params string[] sets)
 		{
 			if(sets == null)
-				throw new ArgumentNullException("sets");
+				throw new ArgumentNullException(nameof(sets));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.GetIntersectFromSets(sets);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Intersect, sets.Cast<RedisKey>().ToArray()).Cast<string>());
 		}
 
-		public void SetIntersect(string destination, params string[] sets)
+		public long SetIntersect(string destination, params string[] sets)
 		{
 			if(sets == null)
-				throw new ArgumentNullException("sets");
+				throw new ArgumentNullException(nameof(sets));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				redis.StoreIntersectFromSets(destination, sets);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.SetCombineAndStore(SetOperation.Intersect, destination, sets.Cast<string>().ToArray());
 		}
 
 		public HashSet<string> GetUnion(params string[] sets)
 		{
 			if(sets == null)
-				throw new ArgumentNullException("sets");
+				throw new ArgumentNullException(nameof(sets));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return redis.GetUnionFromSets(sets);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Union, sets.Cast<RedisKey>().ToArray()).Cast<string>());
 		}
 
-		public void SetUnion(string destination, params string[] sets)
+		public long SetUnion(string destination, params string[] sets)
 		{
 			if(sets == null)
-				throw new ArgumentNullException("sets");
+				throw new ArgumentNullException(nameof(sets));
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				redis.StoreUnionFromSets(destination, sets);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Database.SetCombineAndStore(SetOperation.Union, destination, sets.Cast<RedisKey>().ToArray());
 		}
 
-		public int Publish(string channel, string message)
+		public long Publish(string channel, string message)
 		{
 			if(string.IsNullOrWhiteSpace(channel))
-				throw new ArgumentNullException("channel");
+				throw new ArgumentNullException(nameof(channel));
 
 			if(string.IsNullOrEmpty(message))
 				return 0;
 
-			//获取或创建Redis客户端代理对象
-			var redis = this.Proxy;
-
-			try
-			{
-				return (int)redis.PublishMessage(channel, message);
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			return this.Redis.GetSubscriber().Publish(channel, message);
 		}
 		#endregion
 
@@ -758,23 +537,12 @@ namespace Zongsoft.Externals.Redis
 			}
 		}
 
-		Zongsoft.Runtime.Caching.ICacheCreator Zongsoft.Runtime.Caching.ICache.Creator
+		TimeSpan? Zongsoft.Runtime.Caching.ICache.GetExpiry(string key)
 		{
-			get;
-			set;
+			return this.GetEntryExpire(key);
 		}
 
-		TimeSpan? Zongsoft.Runtime.Caching.ICache.GetDuration(string key)
-		{
-			var duration = this.GetEntryExpire(key);
-
-			if(duration == TimeSpan.Zero)
-				return null;
-
-			return duration;
-		}
-
-		void Zongsoft.Runtime.Caching.ICache.SetDuration(string key, TimeSpan duration)
+		void Zongsoft.Runtime.Caching.ICache.SetExpiry(string key, TimeSpan duration)
 		{
 			this.SetEntryExpire(key, duration);
 		}
@@ -786,6 +554,9 @@ namespace Zongsoft.Externals.Redis
 
 		object Zongsoft.Runtime.Caching.ICache.GetValue(string key)
 		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
 			var creator = ((Zongsoft.Runtime.Caching.ICache)this).Creator;
 
 			if(creator == null)
@@ -798,87 +569,50 @@ namespace Zongsoft.Externals.Redis
 			});
 		}
 
-		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Tuple<object, TimeSpan>> valueCreator)
+		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Zongsoft.Runtime.Caching.CacheEntry> valueCreator)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
 			if(valueCreator == null)
 				return this.GetEntry(key);
 
-			var redis = this.Proxy;
+			var result = valueCreator(key);
 
-			try
+			if(result.Value == null)
 			{
-				var result = valueCreator(key);
-
-				if(result == null && result.Item1 == null)
-				{
-					redis.Remove(key);
-					return null;
-				}
-
-				if(redis.SetEntryIfNotExists(key, result.Item1.ToString()))
-				{
-					if(result.Item2 > TimeSpan.Zero)
-						redis.ExpireEntryIn(key, result.Item2);
-
-					return result.Item1;
-				}
-			}
-			finally
-			{
-				_redisPool.Release(redis);
+				this.Database.KeyDelete(key);
+				return null;
 			}
 
-			return this.GetEntry(key);
-		}
+			var text = result.Value.ToString();
 
-		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Tuple<object, DateTime>> valueCreator)
-		{
-			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+			if(this.Database.StringSet(key, text, result.Expiry, When.NotExists))
+				return text;
 
-			if(valueCreator == null)
-				return this.GetEntry(key);
-
-			var redis = this.Proxy;
-
-			try
-			{
-				var result = valueCreator(key);
-
-				if(result == null && result.Item1 == null)
-				{
-					redis.Remove(key);
-					return null;
-				}
-
-				if(redis.SetEntryIfNotExists(key, result.Item1.ToString()))
-				{
-					if(result.Item2 > DateTime.Now)
-						redis.ExpireEntryAt(key, result.Item2);
-
-					return result.Item1;
-				}
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
-
-			return this.GetEntry(key);
+			return null;
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value)
 		{
-			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, TimeSpan.Zero, false);
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			if(value == null)
+				return this.Database.KeyDelete(key);
+			else
+				return this.Database.StringSet(key, value.ToString());
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, TimeSpan duration, bool requiredNotExists = false)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
+
+			if(value == null)
+				return this.Database.KeyDelete(key);
+			else
+				return this.Database.StringSet(key, value.ToString(), duration, requiredNotExists ? When.NotExists : When.Always);
 
 			if(value == null)
 				return this.Remove(key);
@@ -1088,10 +822,16 @@ namespace Zongsoft.Externals.Redis
 
 		protected virtual void Dispose(bool disposing)
 		{
-			var pool = Interlocked.Exchange(ref _redisPool, null);
+			if(_isDisposed)
+				return;
 
-			if(pool != null)
-				pool.Dispose();
+			_isDisposed = true;
+			_database = null;
+
+			var redis = Interlocked.Exchange(ref _redis, null);
+
+			if(redis != null)
+				redis.Dispose();
 
 			var caches = _caches;
 

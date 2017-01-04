@@ -44,7 +44,7 @@ namespace Zongsoft.Externals.Redis
 		/// <summary>
 		/// 获取当前 Redis 服务的设置参数。
 		/// </summary>
-		RedisServiceSettings Settings
+		StackExchange.Redis.ConfigurationOptions Settings
 		{
 			get;
 		}
@@ -57,6 +57,8 @@ namespace Zongsoft.Externals.Redis
 		IRedisHashset GetHashset(string name);
 		IRedisQueue GetQueue(string name);
 		#endregion
+
+		bool Use(int databaseId);
 
 		RedisSubscriber CreateSubscriber();
 
@@ -77,12 +79,12 @@ namespace Zongsoft.Externals.Redis
 		bool SetValue(string key, string value, TimeSpan duration, bool requiredNotExists = false);
 
 		RedisEntryType GetEntryType(string key);
-		TimeSpan GetEntryExpire(string key);
+		TimeSpan? GetEntryExpire(string key);
 		bool SetEntryExpire(string key, TimeSpan duration);
 
 		void Clear();
 		bool Remove(string key);
-		void RemoveRange(params string[] keys);
+		void RemoveMany(params string[] keys);
 
 		bool Contains(string key);
 		bool Rename(string oldKey, string newKey);
@@ -102,7 +104,7 @@ namespace Zongsoft.Externals.Redis
 		/// </summary>
 		/// <param name="destination">指定的目的哈希集名称，如果<paramref name="destination"/>哈希集已经存在则将其覆盖，可以指定为当前哈希集。</param>
 		/// <param name="sets">指定的哈希集的名称数组。</param>
-		void SetIntersect(string destination, params string[] sets);
+		long SetIntersect(string destination, params string[] sets);
 
 		/// <summary>
 		/// 返回所有给定哈希集之间的并集。
@@ -116,7 +118,7 @@ namespace Zongsoft.Externals.Redis
 		/// </summary>
 		/// <param name="destination">指定的目的哈希集名称，如果<paramref name="destination"/>哈希集已经存在则将其覆盖，可以指定为当前哈希集。</param>
 		/// <param name="sets">指定的哈希集的名称数组。</param>
-		void SetUnion(string destination, params string[] sets);
+		long SetUnion(string destination, params string[] sets);
 
 		/// <summary>
 		/// 发送一条消息到指定的通道。
@@ -124,6 +126,6 @@ namespace Zongsoft.Externals.Redis
 		/// <param name="channel">指定的消息通道。</param>
 		/// <param name="message">要发送的消息。</param>
 		/// <returns>返回接收到信息的订阅者数量。</returns>
-		int Publish(string channel, string message);
+		long Publish(string channel, string message);
 	}
 }

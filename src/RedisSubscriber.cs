@@ -1,8 +1,8 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -25,12 +25,7 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using ServiceStack.Redis;
 
 namespace Zongsoft.Externals.Redis
 {
@@ -44,66 +39,38 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 成员字段
-		private RedisClient _redis;
-		private IRedisSubscription _redisSubscription;
+		private StackExchange.Redis.ISubscriber _subscriber;
 		#endregion
 
 		#region 构造函数
-		public RedisSubscriber()
+		public RedisSubscriber(StackExchange.Redis.ISubscriber subscriber)
 		{
-		}
+			if(subscriber == null)
+				throw new ArgumentNullException(nameof(subscriber));
 
-		public RedisSubscriber(RedisClient redis)
-		{
-			if(redis == null)
-				throw new ArgumentNullException("redis");
-
-			_redis = redis;
-			_redisSubscription = new ServiceStack.Redis.RedisSubscription(_redis);
-			_redisSubscription.OnMessage = this.OnReceived;
-			_redisSubscription.OnSubscribe = this.OnSubscribed;
-			_redisSubscription.OnUnSubscribe = this.OnUnsubscribed;
+			_subscriber = subscriber;
 		}
 		#endregion
 
 		#region 公共属性
-		public RedisClient Proxy
-		{
-			get
-			{
-				return _redis;
-			}
-			set
-			{
-				if(value == null)
-					throw new ArgumentNullException();
-
-				if(object.ReferenceEquals(_redis, value))
-					return;
-
-				_redis = value;
-
-				var subscription = System.Threading.Interlocked.Exchange(ref _redisSubscription, new ServiceStack.Redis.RedisSubscription(_redis)
-				{
-					OnMessage = this.OnReceived,
-					OnSubscribe = this.OnSubscribed,
-					OnUnSubscribe = this.OnUnsubscribed,
-				});
-
-				if(subscription != null)
-				{
-					subscription.OnMessage = null;
-					subscription.OnSubscribe = null;
-					subscription.OnUnSubscribe = null;
-				}
-			}
-		}
-
 		public bool IsDisposed
 		{
 			get
 			{
-				return _redis == null;
+				return _subscriber == null;
+			}
+		}
+
+		public StackExchange.Redis.ISubscriber Subscriber
+		{
+			get
+			{
+				var subscriber = _subscriber;
+
+				if(subscriber == null)
+					throw new ObjectDisposedException(nameof(RedisSubscriber));
+
+				return subscriber;
 			}
 		}
 		#endregion
@@ -111,12 +78,15 @@ namespace Zongsoft.Externals.Redis
 		#region 公共方法
 		public void Subscribe(params string[] channels)
 		{
-			var redis = this.Proxy;
+			foreach(var channel in channels)
+			{
+				this.Subscriber.Subscribe(channel, (ch, message) =>
+				{
+					this.OnReceived(ch, message);
+				});
 
-			if(redis == null)
-				throw new ObjectDisposedException(this.GetType().FullName);
-
-			_redisSubscription.SubscribeToChannels(channels);
+				this.OnSubscribed(channel);
+			}
 		}
 
 		public void Unsubscribe(params string[] channels)
@@ -183,29 +153,16 @@ namespace Zongsoft.Externals.Redis
 			this.Dispose(true);
 			GC.SuppressFinalize(this);
 
-			var disposed = this.Disposed;
-
-			if(disposed != null)
-				disposed(this, new Common.DisposedEventArgs(true));
+			//激发“Disposed”事件
+			this.Disposed?.Invoke(this, new Common.DisposedEventArgs(true));
 		}
 
 		protected virtual void Dispose(bool disposing)
 		{
-			var redis = System.Threading.Interlocked.Exchange(ref _redis, null);
+			var subscriber = System.Threading.Interlocked.Exchange(ref _subscriber, null);
 
-			if(redis != null)
-				redis.Dispose();
-
-			var redisSubscription = System.Threading.Interlocked.Exchange(ref _redisSubscription, null);
-
-			if(redisSubscription != null)
-			{
-				redisSubscription.OnMessage = null;
-				redisSubscription.OnSubscribe = null;
-				redisSubscription.OnUnSubscribe = null;
-
-				redisSubscription.Dispose();
-			}
+			if(subscriber != null)
+				subscriber.UnsubscribeAll(StackExchange.Redis.CommandFlags.FireAndForget);
 		}
 		#endregion
 	}
