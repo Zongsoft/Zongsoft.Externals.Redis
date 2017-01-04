@@ -51,7 +51,7 @@ namespace Zongsoft.Externals.Redis
 		/// </summary>
 		/// <param name="destination">指定的目的哈希集名称，如果<paramref name="destination"/>哈希集已经存在则将其覆盖，可以指定为当前哈希集。</param>
 		/// <param name="other">指定的其他哈希集的名称数组。</param>
-		void SetExcept(string destination, params string[] other);
+		long SetExcept(string destination, params string[] other);
 
 		/// <summary>
 		/// 返回当前哈希集与所有给定哈希集之间的交集。
@@ -65,7 +65,7 @@ namespace Zongsoft.Externals.Redis
 		/// </summary>
 		/// <param name="destination">指定的目的哈希集名称，如果<paramref name="destination"/>哈希集已经存在则将其覆盖，可以指定为当前哈希集。</param>
 		/// <param name="other">指定的其他哈希集的名称数组。</param>
-		void SetIntersect(string destination, params string[] other);
+		long SetIntersect(string destination, params string[] other);
 
 		/// <summary>
 		/// 返回当前哈希集与所有给定哈希集之间的并集。
@@ -79,7 +79,7 @@ namespace Zongsoft.Externals.Redis
 		/// </summary>
 		/// <param name="destination">指定的目的哈希集名称，如果<paramref name="destination"/>哈希集已经存在则将其覆盖，可以指定为当前哈希集。</param>
 		/// <param name="other">指定的其他哈希集的名称数组。</param>
-		void SetUnion(string destination, params string[] other);
+		long SetUnion(string destination, params string[] other);
 
 		/// <summary>
 		/// 返回指定个数的随机成员集，结果集是随机且不重复的。
@@ -100,12 +100,12 @@ namespace Zongsoft.Externals.Redis
 		/// 批量添加多个元素到哈希集中。
 		/// </summary>
 		/// <param name="items">指定要批量添加的元素。</param>
-		void AddRange(params string[] items);
+		int AddRange(params string[] items);
 
 		/// <summary>
 		/// 删除指定的多个元素。
 		/// </summary>
 		/// <param name="items">指定的多个元素。</param>
-		void RemoveRange(params string[] items);
+		int RemoveRange(params string[] items);
 	}
 }

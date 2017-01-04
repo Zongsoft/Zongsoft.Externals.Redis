@@ -25,7 +25,6 @@
  */
 
 using System;
-using System.Net;
 using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
@@ -59,8 +58,6 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		bool Use(int databaseId);
-
-		RedisSubscriber CreateSubscriber();
 
 		/// <summary>
 		/// 获取指定键的条目。

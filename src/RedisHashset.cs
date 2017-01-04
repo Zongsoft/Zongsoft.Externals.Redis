@@ -27,6 +27,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+
+using StackExchange.Redis;
 
 namespace Zongsoft.Externals.Redis
 {
@@ -37,7 +40,7 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 构造函数
-		public RedisHashset(string name, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> redisPool) : base(name, redisPool)
+		public RedisHashset(string name, StackExchange.Redis.IDatabase database) : base(name, database)
 		{
 			_syncRoot = new object();
 		}
@@ -48,16 +51,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				var redis = this.Redis;
-
-				try
-				{
-					return (int)redis.GetSetCount(this.Name);
-				}
-				finally
-				{
-					this.RedisPool.Release(redis);
-				}
+				return (int)this.Database.SetLength(this.Name);
 			}
 		}
 
@@ -73,239 +67,80 @@ namespace Zongsoft.Externals.Redis
 		#region 公共方法
 		public HashSet<string> GetExcept(params string[] other)
 		{
-			var redis = this.Redis;
-
-			try
-			{
-				return redis.GetDifferencesFromSet(this.Name, other);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Difference, this.GetRedisKeys(other)).Cast<string>());
 		}
 
-		public void SetExcept(string destination, params string[] other)
+		public long SetExcept(string destination, params string[] other)
 		{
-			var redis = this.Redis;
-
-			try
-			{
-				redis.StoreDifferencesFromSet(destination, this.Name, other);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return this.Database.SetCombineAndStore(SetOperation.Difference, destination, this.GetRedisKeys(other));
 		}
 
 		public HashSet<string> GetIntersect(params string[] other)
 		{
-			var sets = new string[other.Length + 1];
-			sets[0] = this.Name;
-			Array.Copy(other, 0, sets, 1, other.Length);
-
-			var redis = this.Redis;
-
-			try
-			{
-				return redis.GetIntersectFromSets(sets);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Intersect, this.GetRedisKeys(other)).Cast<string>());
 		}
 
-		public void SetIntersect(string destination, params string[] other)
+		public long SetIntersect(string destination, params string[] other)
 		{
-			var sets = new string[other.Length + 1];
-			sets[0] = this.Name;
-			Array.Copy(other, 0, sets, 1, other.Length);
-
-			var redis = this.Redis;
-
-			try
-			{
-				redis.StoreIntersectFromSets(destination, sets);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return this.Database.SetCombineAndStore(SetOperation.Intersect, destination, this.GetRedisKeys(other));
 		}
 
 		public HashSet<string> GetUnion(params string[] other)
 		{
-			var sets = new string[other.Length + 1];
-			sets[0] = this.Name;
-			Array.Copy(other, 0, sets, 1, other.Length);
-
-			var redis = this.Redis;
-
-			try
-			{
-				return redis.GetUnionFromSets(sets);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Union, this.GetRedisKeys(other)).Cast<string>());
 		}
 
-		public void SetUnion(string destination, params string[] other)
+		public long SetUnion(string destination, params string[] other)
 		{
-			var sets = new string[other.Length + 1];
-			sets[0] = this.Name;
-			Array.Copy(other, 0, sets, 1, other.Length);
-
-			var redis = this.Redis;
-
-			try
-			{
-				redis.StoreUnionFromSets(destination, sets);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return this.Database.SetCombineAndStore(SetOperation.Union, destination, this.GetRedisKeys(other));
 		}
 
 		public HashSet<string> GetRandomValues(int count)
 		{
-			var result = new HashSet<string>();
-			var redis = this.Redis;
-
-			try
-			{
-				for(int i = 0; i < Math.Max(1, count); i++)
-				{
-					result.Add(redis.GetRandomItemFromSet(this.Name));
-				}
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
-
-			return result;
+			return new HashSet<string>(this.Database.SetRandomMembers(this.Name, count).Cast<string>());
 		}
 
 		public bool Move(string destination, string item)
 		{
-			var redis = this.Redis;
-
-			try
-			{
-				redis.MoveBetweenSets(this.Name, destination, item);
-				return true;
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return this.Database.SetMove(this.Name, destination, item);
 		}
 
-		public void RemoveRange(params string[] items)
+		public int RemoveRange(params string[] items)
 		{
-			var redis = this.Redis;
-			var transaction = redis.CreateTransaction();
-
-			try
-			{
-				foreach(var item in items)
-				{
-					transaction.QueueCommand(proxy => proxy.RemoveEntryFromHash(this.Name, item));
-				}
-
-				transaction.Commit();
-			}
-			finally
-			{
-				if(transaction != null)
-					transaction.Dispose();
-
-				this.RedisPool.Release(redis);
-			}
+			return (int)this.Database.SetRemove(this.Name, items.Cast<RedisValue>().ToArray());
 		}
 
 		public bool Remove(string item)
 		{
-			var redis = this.Redis;
-
-			try
-			{
-				redis.RemoveItemFromSet(this.Name, item);
-				return true;
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return this.Database.SetRemove(this.Name, item);
 		}
 
 		public void Add(string item)
 		{
-			var redis = this.Redis;
-
-			try
-			{
-				redis.AddItemToSet(this.Name, item);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			this.Database.SetAdd(this.Name, item);
 		}
 
-		public void AddRange(IEnumerable<string> items)
+		public int AddRange(IEnumerable<string> items)
 		{
 			if(items == null)
-				return;
+				return 0;
 
-			var redis = this.Redis;
-
-			try
-			{
-				redis.AddRangeToSet(this.Name, System.Linq.Enumerable.ToList(items));
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return (int)this.Database.SetAdd(this.Name, items.Cast<RedisValue>().ToArray());
 		}
 
-		public void AddRange(params string[] items)
+		public int AddRange(params string[] items)
 		{
-			this.AddRange((IEnumerable<string>)items);
+			return this.AddRange((IEnumerable<string>)items);
 		}
 
 		public void Clear()
 		{
-			var redis = this.Redis;
-
-			try
-			{
-				redis.Remove(this.Name);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			this.Database.KeyDelete(this.Name);
 		}
 
 		public bool Contains(string item)
 		{
-			var redis = this.Redis;
-
-			try
-			{
-				return redis.SetContainsItem(this.Name, item);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
+			return this.Database.SetContains(this.Name, item);
 		}
 		#endregion
 
@@ -328,18 +163,24 @@ namespace Zongsoft.Externals.Redis
 
 		void ICollection.CopyTo(Array array, int index)
 		{
-			throw new NotSupportedException();
+			var items = this.Database.SetMembers(this.Name);
+
+			if(items != null && items.Length > 0)
+				Array.Copy(items, 0, array, index, array.Length - index);
 		}
 
-		void ICollection<string>.CopyTo(string[] array, int arrayIndex)
+		void ICollection<string>.CopyTo(string[] array, int index)
 		{
-			throw new NotSupportedException();
+			var items = this.Database.SetMembers(this.Name);
+
+			if(items != null && items.Length > 0)
+				Array.Copy(items, 0, array, index, array.Length - index);
 		}
 
 		int IList.Add(object value)
 		{
 			if(value == null)
-				throw new ArgumentNullException("value");
+				throw new ArgumentNullException(nameof(value));
 
 			this.Add(value.ToString());
 
@@ -401,27 +242,25 @@ namespace Zongsoft.Externals.Redis
 		#region 遍历枚举
 		public IEnumerator<string> GetEnumerator()
 		{
-			HashSet<string> items;
-			var redis = this.Redis;
-
-			try
-			{
-				items = redis.GetAllItemsFromSet(this.Name);
-			}
-			finally
-			{
-				this.RedisPool.Release(redis);
-			}
-
-			foreach(var item in items)
-			{
-				yield return item;
-			}
+			return this.Database.SetScan(this.Name).Cast<string>().GetEnumerator();
 		}
 
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
 		{
 			return this.GetEnumerator();
+		}
+		#endregion
+
+		#region 私有方法
+		private RedisKey[] GetRedisKeys(string[] keys)
+		{
+			if(keys == null || keys.Length == 0)
+				throw new ArgumentNullException(nameof(keys));
+
+			var result = new RedisKey[keys.Length + 1];
+			result[0] = this.Name;
+			Array.Copy(keys, 0, result, 1, keys.Length);
+			return result;
 		}
 		#endregion
 	}

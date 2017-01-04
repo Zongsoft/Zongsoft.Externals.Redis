@@ -1,8 +1,8 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -25,24 +25,25 @@
  */
 
 using System;
-using System.Net;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
 
-namespace Zongsoft.Externals.Redis
+namespace Zongsoft.Externals.Redis.Configuration
 {
-	internal static class RedisPoolManager
+	public interface IRedisConfiguration
 	{
-		private static ConcurrentDictionary<string, Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient>> _cache;
-
-		static RedisPoolManager()
+		string DefaultConnectionName
 		{
-			_cache = new ConcurrentDictionary<string, Collections.ObjectPool<ServiceStack.Redis.IRedisClient>>();
+			get;
+			set;
 		}
 
-		public static Zongsoft.Collections.ObjectPool<ServiceStack.Redis.IRedisClient> GetRedisPool(IPEndPoint address, int poolSize, Func<ServiceStack.Redis.IRedisClient> creator)
+		string DefaultConnectionString
 		{
-			return _cache.GetOrAdd(address.ToString(), new Collections.ObjectPool<ServiceStack.Redis.IRedisClient>(creator, p => p.Dispose(), Math.Max(poolSize, 16)));
+			get;
+		}
+
+		Zongsoft.Options.ISettingsProvider ConnectionStrings
+		{
+			get;
 		}
 	}
 }

@@ -52,9 +52,19 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 构造函数
-		public RedisService()
+		public RedisService(Zongsoft.Options.IOptionProvider options)
 		{
-			_setting = ConfigurationOptions.Parse("127.0.0.1");
+			var connectionString = "127.0.0.1";
+
+			if(options != null)
+			{
+				var configuration = options.GetOptionObject("/Externals/Redis") as Configuration.IRedisConfiguration;
+
+				if(configuration != null)
+					connectionString = configuration.DefaultConnectionString;
+			}
+
+			_setting = ConfigurationOptions.Parse(connectionString);
 			_syncRoot = new object();
 		}
 
@@ -221,12 +231,6 @@ namespace Zongsoft.Externals.Redis
 			return database != null;
 		}
 
-		public RedisSubscriber CreateSubscriber()
-		{
-			this.Redis.GetSubscriber();
-			return new RedisSubscriber(this.CreateProxy());
-		}
-
 		public object GetEntry(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
@@ -336,7 +340,7 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			return this.Database.StringGetWithExpiry(key).Expiry;
+			return this.Database.KeyTimeToLive(key);
 		}
 
 		public bool SetEntryExpire(string key, TimeSpan duration)
@@ -475,22 +479,6 @@ namespace Zongsoft.Externals.Redis
 		}
 		#endregion
 
-		#region 虚拟方法
-		protected virtual ServiceStack.Redis.RedisClient CreateProxy()
-		{
-			var redis = new ServiceStack.Redis.RedisClient(_settings.Address.Address.ToString(), _settings.Address.Port, _settings.Password, _settings.DatabaseId);
-
-			if(_settings.Timeout > TimeSpan.Zero)
-			{
-				redis.ConnectTimeout = (int)_settings.Timeout.TotalMilliseconds;
-				redis.RetryTimeout = (int)_settings.Timeout.TotalMilliseconds;
-				redis.SendTimeout = (int)_settings.Timeout.TotalMilliseconds;
-			}
-
-			return redis;
-		}
-		#endregion
-
 		#region 私有方法
 		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, bool, T> createThunk) where T : RedisObjectBase
 		{
@@ -581,16 +569,18 @@ namespace Zongsoft.Externals.Redis
 
 			if(result.Value == null)
 			{
-				this.Database.KeyDelete(key);
-				return null;
+				if(this.Database.KeyDelete(key))
+					return null;
+
+				return this.GetEntry(key);
 			}
 
-			var text = result.Value.ToString();
+			var text = Utility.GetStoreString(result.Value);
 
 			if(this.Database.StringSet(key, text, result.Expiry, When.NotExists))
 				return text;
 
-			return null;
+			return this.GetEntry(key);
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value)
