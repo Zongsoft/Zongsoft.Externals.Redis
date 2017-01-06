@@ -55,7 +55,7 @@ namespace Zongsoft.Externals.Redis.Commands
 					hashset.Clear();
 			}
 
-			this.Redis.RemoveRange(parameter.Expression.Arguments);
+			this.Redis.RemoveMany(parameter.Expression.Arguments);
 
 			return null;
 		}

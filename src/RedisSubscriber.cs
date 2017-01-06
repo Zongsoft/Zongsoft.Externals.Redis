@@ -78,6 +78,9 @@ namespace Zongsoft.Externals.Redis
 		#region 公共方法
 		public void Subscribe(params string[] channels)
 		{
+			if(channels == null)
+				throw new ArgumentNullException(nameof(channels));
+
 			foreach(var channel in channels)
 			{
 				this.Subscriber.Subscribe(channel, (ch, message) =>
@@ -91,33 +94,32 @@ namespace Zongsoft.Externals.Redis
 
 		public void Unsubscribe(params string[] channels)
 		{
-			var redis = this.Proxy;
+			if(channels == null)
+				throw new ArgumentNullException(nameof(channels));
 
-			if(redis == null)
-				throw new ObjectDisposedException(this.GetType().FullName);
-
-			_redisSubscription.UnSubscribeFromChannels(channels);
+			foreach(var channel in channels)
+			{
+				this.Subscriber.Unsubscribe(channel, (ch, message) =>
+				{
+					this.OnUnsubscribed(ch);
+				});
+			}
 		}
 
 		public void UnsubscribeAll()
 		{
-			_redisSubscription.UnSubscribeFromAllChannels();
+			this.Subscriber.UnsubscribeAll();
 		}
 
 		public long Publish(string channel, string message)
 		{
-			var redis = this.Proxy;
-
-			if(redis == null)
-				throw new ObjectDisposedException(this.GetType().FullName);
-
 			if(string.IsNullOrWhiteSpace(channel))
-				throw new ArgumentNullException("channel");
+				throw new ArgumentNullException(nameof(channel));
 
 			if(string.IsNullOrEmpty(message))
 				return 0;
 
-			return redis.PublishMessage(channel, message);
+			return this.Subscriber.Publish(channel, message);
 		}
 		#endregion
 

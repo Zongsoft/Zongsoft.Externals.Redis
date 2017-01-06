@@ -50,7 +50,7 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length == 1)
 				this.Redis.Remove(context.Expression.Arguments[0]);
 			else
-				this.Redis.RemoveRange(context.Expression.Arguments);
+				this.Redis.RemoveMany(context.Expression.Arguments);
 
 			return null;
 		}
