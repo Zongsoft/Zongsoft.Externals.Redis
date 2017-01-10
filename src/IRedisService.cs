@@ -69,7 +69,21 @@ namespace Zongsoft.Externals.Redis
 		string GetValue(string key);
 		IEnumerable<string> GetValues(params string[] keys);
 
+		/// <summary>
+		/// 将给定<paramref name="key"/>的值设为<paramref name="value"/>，并返回<paramref name="key"/>的旧值(old value)。
+		/// </summary>
+		/// <param name="key">指定的键。</param>
+		/// <param name="value">指定要更新的值。</param>
+		/// <returns>返回指定键的旧值，如果为空(null)则说明没有旧值，即指定的键在此之前还不存在。</returns>
 		string ExchangeValue(string key, string value);
+
+		/// <summary>
+		/// 将给定<paramref name="key"/>的值设为<paramref name="value"/>，并返回<paramref name="key"/>的旧值(old value)。
+		/// </summary>
+		/// <param name="key">指定的键。</param>
+		/// <param name="value">指定要更新的值。</param>
+		/// <param name="duration">指定要设置的有效期限。</param>
+		/// <returns>返回指定键的旧值，如果为空(null)则说明没有旧值，即指定的键在此之前还不存在。</returns>
 		string ExchangeValue(string key, string value, TimeSpan duration);
 
 		bool SetValue(string key, string value);

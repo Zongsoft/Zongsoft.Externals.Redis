@@ -83,7 +83,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return -1;
+				return this.Redis.GetServer(this.Redis.GetCounters().EndPoint).DatabaseSize(this.Database.Database);
 			}
 		}
 
@@ -275,6 +275,7 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
+			//更新指定键值对，并返回指定键的旧值
 			return this.Database.StringGetSet(key, value);
 		}
 
@@ -283,15 +284,14 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			//尝试获取指定键的条目值
-			string result = this.Database.StringGet(key);
+			//更新指定键值对，并返回指定键的旧值
+			var result = this.Database.StringGetSet(key, value);
 
-			//如果指定的键存在则返回它
-			if(result != null)
-				return result;
+			//如果指定的有效期大于零，则设置它的有效期
+			if(duration > TimeSpan.Zero)
+				this.Database.KeyExpire(key, duration, CommandFlags.FireAndForget);
 
-			//设置指定的键值对并附加指定的有效期
-			return this.Database.StringSet(key, value, duration, When.NotExists) ? value : null;
+			return result;
 		}
 
 		public bool SetValue(string key, string value)
@@ -372,19 +372,7 @@ namespace Zongsoft.Externals.Redis
 
 		public void Clear()
 		{
-			this.Redis.GetServer().FlushDatabaseAsync(this.Database.Database);
-
-			//获取或创建Redis客户端代理对象
-			var redis = this.Redis;
-
-			try
-			{
-				redis.DeleteAll<object>();
-			}
-			finally
-			{
-				_redisPool.Release(redis);
-			}
+			this.Redis.GetServer(this.Redis.GetCounters().EndPoint).FlushDatabase(this.Database.Database);
 		}
 
 		public bool Remove(string key)
@@ -448,7 +436,7 @@ namespace Zongsoft.Externals.Redis
 			if(sets == null)
 				throw new ArgumentNullException(nameof(sets));
 
-			return this.Database.SetCombineAndStore(SetOperation.Intersect, destination, sets.Cast<string>().ToArray());
+			return this.Database.SetCombineAndStore(SetOperation.Intersect, destination, sets.Cast<RedisKey>().ToArray());
 		}
 
 		public HashSet<string> GetUnion(params string[] sets)
@@ -545,16 +533,7 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			var creator = ((Zongsoft.Runtime.Caching.ICache)this).Creator;
-
-			if(creator == null)
-				return this.GetEntry(key);
-
-			return ((Zongsoft.Runtime.Caching.ICache)this).GetValue(key, _ =>
-			{
-				TimeSpan duration;
-				return new Tuple<object, TimeSpan>(creator.Create(null, _, out duration), duration);
-			});
+			return this.GetEntry(key);
 		}
 
 		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Zongsoft.Runtime.Caching.CacheEntry> valueCreator)
@@ -565,22 +544,19 @@ namespace Zongsoft.Externals.Redis
 			if(valueCreator == null)
 				return this.GetEntry(key);
 
-			var result = valueCreator(key);
+			var result = this.GetEntry(key);
 
-			if(result.Value == null)
+			if(result == null)
 			{
-				if(this.Database.KeyDelete(key))
-					return null;
+				var entry = valueCreator(key);
 
-				return this.GetEntry(key);
+				if(this.Database.StringSet(key, Utility.GetStoreString(entry.Value), entry.Expiry, When.NotExists))
+					return entry.Value;
+				else
+					return this.GetEntry(key);
 			}
 
-			var text = Utility.GetStoreString(result.Value);
-
-			if(this.Database.StringSet(key, text, result.Expiry, When.NotExists))
-				return text;
-
-			return this.GetEntry(key);
+			return result;
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value)
