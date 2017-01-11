@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -50,7 +50,7 @@ namespace Zongsoft.Externals.Redis.Commands
 
 			int interval = context.Expression.Options.GetValue<int>("interval");
 
-			return this.Redis.GetDictionary(context.Expression.Arguments[0]).Decrement(context.Expression.Arguments[1], interval);
+			return this.Redis.GetEntry<IRedisDictionary>(context.Expression.Arguments[0]).Decrement(context.Expression.Arguments[1], interval);
 		}
 		#endregion
 	}

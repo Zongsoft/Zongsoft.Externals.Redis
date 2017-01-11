@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -49,7 +49,7 @@ namespace Zongsoft.Externals.Redis.Commands
 
 			foreach(var arg in parameter.Expression.Arguments)
 			{
-				var hashset = this.Redis.GetHashset(arg);
+				var hashset = this.Redis.GetEntry<IRedisHashset>(arg);
 
 				if(hashset != null)
 					hashset.Clear();

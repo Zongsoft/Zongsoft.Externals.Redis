@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -182,7 +182,7 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				throw new ArgumentNullException(nameof(value));
 
-			this.Add(value.ToString());
+			this.Database.SetAdd(this.Name, this.GetStoredValue(value));
 
 			return -1;
 		}
@@ -192,7 +192,7 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				return false;
 
-			return this.Contains(value.ToString());
+			return this.Contains(this.GetStoredValue(value));
 		}
 
 		int IList.IndexOf(object value)
@@ -210,7 +210,7 @@ namespace Zongsoft.Externals.Redis
 			if(value == null)
 				return;
 
-			this.Remove(value.ToString());
+			this.Database.SetRemove(this.Name, this.GetStoredValue(value));
 		}
 
 		void IList.RemoveAt(int index)

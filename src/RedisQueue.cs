@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -127,7 +127,7 @@ namespace Zongsoft.Externals.Redis
 		public void Enqueue(string value)
 		{
 			if(value == null)
-				throw new ArgumentNullException("value");
+				throw new ArgumentNullException(nameof(value));
 
 			if(this.Database.ListRightPush(this.Name, value) > 0)
 				this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
@@ -136,12 +136,10 @@ namespace Zongsoft.Externals.Redis
 		public void Enqueue(object value, object settings = null)
 		{
 			if(value == null)
-				throw new ArgumentNullException("value");
+				throw new ArgumentNullException(nameof(value));
 
-			var text = this.ConvertValue(value);
-
-			if(this.Database.ListRightPush(this.Name, text) > 0)
-				this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(text, false));
+			if(this.Database.ListRightPush(this.Name, this.GetStoredValue(value)) > 0)
+				this.OnEnqueued(new Zongsoft.Collections.EnqueuedEventArgs(value, false));
 		}
 
 		public int EnqueueMany<T>(IEnumerable<T> values, object settings = null)
@@ -149,7 +147,7 @@ namespace Zongsoft.Externals.Redis
 			if(values == null)
 				throw new ArgumentNullException("values");
 
-			var items = values.Select(p => (RedisValue)this.ConvertValue(p)).ToArray();
+			var items = values.Select(p => this.GetStoredValue(p)).ToArray();
 			var result = (int)this.Database.ListRightPush(this.Name, items);
 
 			//激发“Enqueued”事件
@@ -217,36 +215,6 @@ namespace Zongsoft.Externals.Redis
 
 			if(enqueued != null)
 				enqueued(this, args);
-		}
-		#endregion
-
-		#region 私有方法
-		private string ConvertValue(object value)
-		{
-			if(value == null)
-				return null;
-
-			if(value.GetType() == typeof(string))
-				return (string)value;
-
-			if(value.GetType().IsPrimitive || value.GetType().IsEnum || value is StringBuilder)
-				return value.ToString();
-
-			var serializable = value as Zongsoft.Runtime.Serialization.ISerializable;
-
-			if(serializable != null)
-			{
-				using(var stream = new MemoryStream())
-				{
-					serializable.Serialize(stream);
-					return Encoding.UTF8.GetString(stream.ToArray());
-				}
-			}
-
-			return Zongsoft.Common.Convert.ConvertValue<string>(value, () =>
-			{
-				return Zongsoft.Runtime.Serialization.Serializer.Json.Serialize(value);
-			});
 		}
 		#endregion
 

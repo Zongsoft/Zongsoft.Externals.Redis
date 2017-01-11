@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -50,7 +50,7 @@ namespace Zongsoft.Externals.Redis.Commands
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
 			var index = context.Expression.Options.GetValue<int>("index");
-			var queue = this.Redis.GetQueue(context.Expression.Arguments[0]);
+			var queue = this.Redis.GetEntry<IRedisQueue>(context.Expression.Arguments[0]);
 
 			int count;
 

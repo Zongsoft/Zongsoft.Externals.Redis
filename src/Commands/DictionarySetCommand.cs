@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -47,7 +47,7 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(parameter.Expression.Arguments.Length < 3)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			var dictionary = this.Redis.GetDictionary(parameter.Expression.Arguments[0]);
+			var dictionary = this.Redis.GetEntry<IRedisDictionary>(parameter.Expression.Arguments[0]);
 
 			if(parameter.Expression.Arguments.Length == 3)
 			{

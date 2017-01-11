@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -34,47 +34,25 @@ namespace Zongsoft.Externals.Redis
 	public class RedisServiceSettings
 	{
 		#region 成员字段
-		private IPEndPoint _address;
-		private string _password;
-		private int _databaseId;
-		private TimeSpan _timeout;
-		private int _poolSize;
+		private StackExchange.Redis.ConfigurationOptions _options;
 		#endregion
 
 		#region 构造函数
-		public RedisServiceSettings()
+		public RedisServiceSettings(StackExchange.Redis.ConfigurationOptions options)
 		{
-			_address = new IPEndPoint(IPAddress.Loopback, 6379);
-		}
+			if(options == null)
+				throw new ArgumentNullException(nameof(options));
 
-		public RedisServiceSettings(IPEndPoint address, string password, int databaseId = 0)
-		{
-			if(address == null)
-				throw new ArgumentNullException("address");
-
-			_address = address;
-			_password = string.IsNullOrEmpty(password) ? null : password;
-			_databaseId = Math.Abs(databaseId);
-
-			if(_address.Port == 0)
-				_address.Port = 6379;
+			_options = options;
 		}
 		#endregion
 
 		#region 公共属性
-		public IPEndPoint Address
+		public ICollection<EndPoint> Addresses
 		{
 			get
 			{
-				return _address;
-			}
-			set
-			{
-				if(value == null)
-					throw new ArgumentNullException();
-
-				if(_address != value)
-					_address = value;
+				return _options.EndPoints;
 			}
 		}
 
@@ -82,11 +60,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return _password;
-			}
-			set
-			{
-				_password = value;
+				return _options.Password;
 			}
 		}
 
@@ -94,37 +68,105 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return _databaseId;
-			}
-			set
-			{
-				if(_databaseId != value)
-					_databaseId = Math.Abs(value);
+				return _options.DefaultDatabase ?? 0;
 			}
 		}
 
-		public TimeSpan Timeout
+		public int ConnectionRetries
 		{
 			get
 			{
-				return _timeout;
-			}
-			set
-			{
-				_timeout = value;
+				return _options.ConnectRetry;
 			}
 		}
 
-		public int PoolSize
+		public TimeSpan ConnectionTimeout
 		{
 			get
 			{
-				return _poolSize;
+				return TimeSpan.FromMilliseconds(_options.ConnectTimeout);
 			}
-			set
+		}
+
+		public TimeSpan OperationTimeout
+		{
+			get
 			{
-				_poolSize = Math.Max(value, 16);
+				return TimeSpan.FromMilliseconds(_options.ResponseTimeout);
 			}
+		}
+
+		public bool UseTwemproxy
+		{
+			get
+			{
+				return _options.Proxy == StackExchange.Redis.Proxy.Twemproxy;
+			}
+		}
+
+		public bool AdvancedModeEnabled
+		{
+			get
+			{
+				return _options.AllowAdmin;
+			}
+		}
+
+		public bool DnsEnabled
+		{
+			get
+			{
+				return _options.ResolveDns;
+			}
+		}
+
+		public bool SslEnabled
+		{
+			get
+			{
+				return _options.Ssl;
+			}
+		}
+
+		public string SslHost
+		{
+			get
+			{
+				return _options.SslHost;
+			}
+		}
+
+		public string ClientName
+		{
+			get
+			{
+				return _options.ClientName;
+			}
+		}
+
+		public string ServiceName
+		{
+			get
+			{
+				return _options.ServiceName;
+			}
+		}
+		#endregion
+
+		#region 内部属性
+		internal StackExchange.Redis.ConfigurationOptions InnerOptions
+		{
+			get
+			{
+				return _options;
+			}
+		}
+		#endregion
+
+		#region 重写方法
+		public override string ToString()
+		{
+			return _options.ToString();
 		}
 		#endregion
 	}

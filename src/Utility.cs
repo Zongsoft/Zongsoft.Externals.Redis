@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -25,10 +25,8 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+using StackExchange.Redis;
 
 namespace Zongsoft.Externals.Redis
 {
@@ -49,16 +47,36 @@ namespace Zongsoft.Externals.Redis
 			return (T)value;
 		}
 
-		public static string GetStoreString(object value)
+		public static StackExchange.Redis.RedisValue GetStoredValue(object value)
 		{
-			string text;
+			if(value == null)
+				return RedisValue.Null;
 
-			if(Zongsoft.Common.TypeExtension.IsScalarType(value.GetType()))
-				text = value.ToString();
-			else
-				text = Zongsoft.Runtime.Serialization.Serializer.Json.Serialize(value);
+			var type = value.GetType();
 
-			return text;
+			if(type == typeof(string))
+				return (string)value;
+
+			if(type.IsPrimitive || type.IsEnum ||
+			   type == typeof(decimal) || type == typeof(DateTime) || type == typeof(DateTimeOffset) ||
+			   type == typeof(TimeSpan) || type == typeof(Guid) || value is System.Text.StringBuilder)
+				return value.ToString();
+
+			var serializable = value as Zongsoft.Runtime.Serialization.ISerializable;
+
+			if(serializable != null)
+			{
+				using(var stream = new System.IO.MemoryStream())
+				{
+					serializable.Serialize(stream);
+					return stream.ToArray();
+				}
+			}
+
+			return Zongsoft.Common.Convert.ConvertValue<string>(value, () =>
+			{
+				return Zongsoft.Runtime.Serialization.Serializer.Json.Serialize(value);
+			});
 		}
 	}
 }

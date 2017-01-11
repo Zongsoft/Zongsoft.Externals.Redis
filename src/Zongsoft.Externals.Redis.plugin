@@ -14,19 +14,8 @@
 
 	<!-- 定义Redis服务对象 -->
 	<extension path="/Workspace/Externals">
-		<object name="Redis" type="Zongsoft.Externals.Redis.RedisService, Zongsoft.Externals.Redis">
-			<object.constructor>
-				<parameter type="Zongsoft.Externals.Redis.Configuration.RedisConfigurationElement, Zongsoft.Externals.Redis"
-				           value="{opt:/Externals/Redis/Default}" />
-			</object.constructor>
-		</object>
-
-		<object name="RedisSequence" type="Zongsoft.Externals.Redis.RedisSequence, Zongsoft.Externals.Redis">
-			<object.constructor>
-				<parameter type="Zongsoft.Externals.Redis.RedisService, Zongsoft.Externals.Redis"
-				           value="{path:../Redis}"/>
-			</object.constructor>
-		</object>
+		<object name="Redis" type="Zongsoft.Externals.Redis.RedisService, Zongsoft.Externals.Redis" />
+		<object name="RedisSequence" value="{path:../Redis.Sequence}" />
 	</extension>
 
 	<!-- 将Redis服务对象挂载到默认服务容器中 -->

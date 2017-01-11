@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -29,7 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public interface IRedisDictionary : IDictionary<string, string>
+	public interface IRedisDictionary : IDictionary<string, string>, Zongsoft.Common.IAccumulator
 	{
 		/// <summary>
 		/// 获取当前<seealso cref="IRedisDictionary"/>字典的名称。
@@ -56,8 +56,5 @@ namespace Zongsoft.Externals.Redis
 		IReadOnlyList<string> GetValues(params string[] keys);
 
 		IReadOnlyDictionary<string, string> GetAllEntries();
-
-		long Increment(string key, int interval = 1);
-		long Decrement(string key, int interval = 1);
 	}
 }

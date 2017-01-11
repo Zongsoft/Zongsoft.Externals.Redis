@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -80,6 +80,13 @@ namespace Zongsoft.Externals.Redis
 			{
 				return _database;
 			}
+		}
+		#endregion
+
+		#region 虚拟方法
+		protected virtual StackExchange.Redis.RedisValue GetStoredValue(object value)
+		{
+			return Utility.GetStoredValue(value);
 		}
 		#endregion
 	}

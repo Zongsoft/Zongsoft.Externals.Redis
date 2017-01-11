@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -52,13 +52,13 @@ namespace Zongsoft.Externals.Redis.Commands
 			var count = context.Expression.Options.GetValue<int>("count");
 
 			if(context.Expression.Arguments.Length == 1)
-				return this.Redis.GetQueue(context.Expression.Arguments[0]).Dequeue(count);
+				return this.Redis.GetEntry<IRedisQueue>(context.Expression.Arguments[0]).Dequeue(count);
 
 			var result = new string[context.Expression.Arguments.Length * count];
 
 			for(int i = 0; i < context.Expression.Arguments.Length; i++)
 			{
-				var queue = this.Redis.GetQueue(context.Expression.Arguments[i]);
+				var queue = this.Redis.GetEntry<IRedisQueue>(context.Expression.Arguments[i]);
 				var items = queue.Dequeue(count);
 
 				int j = 0;

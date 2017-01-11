@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -50,7 +50,7 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			return this.Redis.GetHashset(context.Expression.Arguments[0]);
+			return this.Redis.GetEntry<IRedisHashset>(context.Expression.Arguments[0]);
 		}
 		#endregion
 	}

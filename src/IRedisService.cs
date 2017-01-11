@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -29,11 +29,11 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public interface IRedisService : IDisposable
+	public interface IRedisService : Zongsoft.Collections.IQueueProvider, Zongsoft.Runtime.Caching.ICacheProvider, IDisposable
 	{
 		#region 公共属性
 		/// <summary>
-		/// 获取当前 Redis 服务的记录总数。
+		/// 获取当前Redis数据库的记录总数。
 		/// </summary>
 		long Count
 		{
@@ -41,33 +41,58 @@ namespace Zongsoft.Externals.Redis
 		}
 
 		/// <summary>
-		/// 获取当前 Redis 服务的设置参数。
+		/// 获取当前服务对应的Redis数据库编号。
 		/// </summary>
-		StackExchange.Redis.ConfigurationOptions Settings
+		int DatabaseId
+		{
+			get;
+		}
+
+		/// <summary>
+		/// 获取当前Redis服务的设置参数。
+		/// </summary>
+		RedisServiceSettings Settings
+		{
+			get;
+		}
+
+		/// <summary>
+		/// 获取当前的Redis订阅器对象。
+		/// </summary>
+		RedisSubscriber Subscriber
+		{
+			get;
+		}
+
+		/// <summary>
+		/// 获取当前的Redis服务提供的序号器。
+		/// </summary>
+		Zongsoft.Common.ISequence Sequence
 		{
 			get;
 		}
 		#endregion
 
-		#region 获取集合
-		IRedisDictionary GetDictionary(string name);
-		IRedisDictionary GetDictionary(string name, IDictionary<string, string> items);
-
-		IRedisHashset GetHashset(string name);
-		IRedisQueue GetQueue(string name);
-		#endregion
-
+		/// <summary>
+		/// 切换当前数据库。
+		/// </summary>
+		/// <param name="databaseId">指定要切换的数据库编号。</param>
+		/// <returns>如果切换成功则返回真(True)，否则返回假(False)。</returns>
 		bool Use(int databaseId);
 
 		/// <summary>
-		/// 获取指定键的条目。
+		/// 获取指定键对应的字符串值。
 		/// </summary>
-		/// <param name="key">指定要获取的键。</param>
-		/// <returns>如果指定的键存在则返回对应的条目对象。</returns>
-		object GetEntry(string key);
-
+		/// <param name="key">指定的键。</param>
+		/// <returns>获取到的值，如果指定的键不存在则返回空(null)。</returns>
 		string GetValue(string key);
-		IEnumerable<string> GetValues(params string[] keys);
+
+		/// <summary>
+		/// 获取指定多个键对应的字符串数组。
+		/// </summary>
+		/// <param name="keys">指定的多个键数组。</param>
+		/// <returns>获取到的值数组，如果对应的某个键不存在，则值数组中对应位置的元素值为空(null)。</returns>
+		string[] GetValues(params string[] keys);
 
 		/// <summary>
 		/// 将给定<paramref name="key"/>的值设为<paramref name="value"/>，并返回<paramref name="key"/>的旧值(old value)。
@@ -89,9 +114,18 @@ namespace Zongsoft.Externals.Redis
 		bool SetValue(string key, string value);
 		bool SetValue(string key, string value, TimeSpan duration, bool requiredNotExists = false);
 
+		/// <summary>
+		/// 获取指定键的条目。
+		/// </summary>
+		/// <param name="key">指定要获取的键。</param>
+		/// <returns>如果指定的键存在则返回对应的条目对象。</returns>
+		object GetEntry(string key);
+		T GetEntry<T>(string key, Func<object, T> convert = null);
+
 		RedisEntryType GetEntryType(string key);
-		TimeSpan? GetEntryExpire(string key);
-		bool SetEntryExpire(string key, TimeSpan duration);
+		TimeSpan? GetEntryExpiry(string key);
+		bool SetEntryExpiry(string key, TimeSpan duration);
+		bool SetEntryExpiry(string key, DateTime expires);
 
 		void Clear();
 		bool Remove(string key);

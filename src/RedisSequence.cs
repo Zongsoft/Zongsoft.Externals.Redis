@@ -41,10 +41,6 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 构造函数
-		public RedisSequence()
-		{
-		}
-
 		public RedisSequence(IRedisService redis)
 		{
 			if(redis == null)
@@ -55,7 +51,7 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 公共属性
-		public IRedisService Redis
+		protected IRedisService Redis
 		{
 			get
 			{
@@ -162,13 +158,17 @@ namespace Zongsoft.Externals.Redis
 				throw new ArgumentNullException("name");
 
 			var key = this.GetType().FullName + ":" + name.Trim();
+			var dictionary = (IRedisDictionary)_redis.GetCache(key, true);
 
-			return _redis.GetDictionary(key, new Dictionary<string, string>
-			{
-				{ "Value", seed.ToString() },
-				{ "Interval", interval == 0 ? "1" : interval.ToString() },
-				{ "FormatString", formatString ?? string.Empty },
-			});
+			if(dictionary.Count == 0)
+				dictionary.SetRange(new Dictionary<string, string>
+				{
+					{ "Value", seed.ToString() },
+					{ "Interval", interval == 0 ? "1" : interval.ToString() },
+					{ "FormatString", formatString ?? string.Empty },
+				});
+
+			return dictionary;
 		}
 
 		private string GetFormattedText(string formatString, long sequenceNumber)

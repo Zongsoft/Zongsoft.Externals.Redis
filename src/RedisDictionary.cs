@@ -1,6 +1,6 @@
 ﻿/*
  * Authors:
- *   钟峰(Popeye Zhong) <zongsoft@gmail.com>
+ *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
  * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
  *
@@ -121,6 +121,12 @@ namespace Zongsoft.Externals.Redis
 
 		public void Add(string key, string value)
 		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			if(value == null)
+				throw new ArgumentNullException(nameof(value));
+
 			if(!this.Database.HashSet(this.Name, key, value, StackExchange.Redis.When.NotExists))
 				throw new RedisException($"The '{key}' key of entry is existed in the '{this.Name}' dictionary.");
 		}
@@ -236,25 +242,26 @@ namespace Zongsoft.Externals.Redis
 
 		object Zongsoft.Runtime.Caching.ICache.GetValue(string key, Func<string, Runtime.Caching.CacheEntry> valueCreator)
 		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			var result = this.Database.HashGet(this.Name, key);
+
 			if(valueCreator == null)
-				return this.Database.HashGet(this.Name, key);
+				return result.IsNull ? null : result.ToString();
 
-			var entry = valueCreator(key);
-
-			if(entry.Value == null)
+			if(result.IsNull)
 			{
-				if(this.Database.HashDelete(this.Name, key))
-					return null;
+				var entry = valueCreator(key);
 
+				if(this.Database.HashSet(this.Name, key, this.GetStoredValue(entry.Value), StackExchange.Redis.When.NotExists))
+					return entry.Value;
+
+				//再次获取一遍指定的键值
 				return this.Database.HashGet(this.Name, key);
 			}
 
-			var text = Utility.GetStoreString(entry.Value);
-
-			if(this.Database.HashSet(this.Name, key, text, StackExchange.Redis.When.NotExists))
-				return text;
-
-			return this.Database.HashGet(this.Name, key);
+			return result.ToString();
 		}
 
 		public bool SetValue(string key, object value)
@@ -271,9 +278,9 @@ namespace Zongsoft.Externals.Redis
 				return this.Database.HashDelete(this.Name, key);
 
 			if(requiredNotExists)
-				return this.Database.HashSet(this.Name, key, Utility.GetStoreString(value), StackExchange.Redis.When.NotExists);
+				return this.Database.HashSet(this.Name, key, this.GetStoredValue(value), StackExchange.Redis.When.NotExists);
 			else
-				return this.Database.HashSet(this.Name, key, Utility.GetStoreString(value), StackExchange.Redis.When.Always);
+				return this.Database.HashSet(this.Name, key, this.GetStoredValue(value), StackExchange.Redis.When.Always);
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, DateTime expires, bool requiredNotExists = false)
@@ -306,12 +313,13 @@ namespace Zongsoft.Externals.Redis
 		void IDictionary.Add(object key, object value)
 		{
 			if(key == null)
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
 
 			if(value == null)
-				return;
+				throw new ArgumentNullException(nameof(value));
 
-			this.Add(key.ToString(), Utility.GetStoreString(value));
+			if(!this.Database.HashSet(this.Name, key.ToString(), this.GetStoredValue(value), StackExchange.Redis.When.NotExists))
+				throw new RedisException($"The '{key}' key of entry is existed in the '{this.Name}' dictionary.");
 		}
 
 		void IDictionary.Clear()
@@ -384,7 +392,7 @@ namespace Zongsoft.Externals.Redis
 				if(value == null)
 					this.Remove(key.ToString());
 				else
-					this[key.ToString()] = Utility.GetStoreString(value);
+					this[key.ToString()] = Utility.GetStoredValue(value);
 			}
 		}
 

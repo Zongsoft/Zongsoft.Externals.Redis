@@ -43,12 +43,12 @@ namespace Zongsoft.Externals.Redis
 	{
 		#region 成员字段
 		private readonly object _syncRoot;
-		private readonly ConfigurationOptions _setting;
-		private ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<RedisObjectBase>> _caches;
+		private readonly RedisServiceSettings _settings;
+		private readonly Lazy<RedisSubscriber> _subscriber;
+		private readonly Lazy<RedisSequence> _sequence;
 		private IConnectionMultiplexer _redis;
 		private IDatabase _database;
-		private RedisSubscriber _subscriber;
-		private bool _isDisposed;
+		private int _isDisposed;
 		#endregion
 
 		#region 构造函数
@@ -64,8 +64,10 @@ namespace Zongsoft.Externals.Redis
 					connectionString = configuration.DefaultConnectionString;
 			}
 
-			_setting = ConfigurationOptions.Parse(connectionString);
+			_settings = new RedisServiceSettings(ConfigurationOptions.Parse(connectionString));
 			_syncRoot = new object();
+			_subscriber = new Lazy<Externals.Redis.RedisSubscriber>(true);
+			_sequence = new Lazy<Externals.Redis.RedisSequence>(true);
 		}
 
 		public RedisService(string connectionString)
@@ -73,8 +75,10 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(connectionString))
 				connectionString = "127.0.0.1";
 
-			_setting = ConfigurationOptions.Parse(connectionString);
+			_settings = new RedisServiceSettings(ConfigurationOptions.Parse(connectionString));
 			_syncRoot = new object();
+			_subscriber = new Lazy<Externals.Redis.RedisSubscriber>(true);
+			_sequence = new Lazy<Externals.Redis.RedisSequence>(true);
 		}
 		#endregion
 
@@ -83,7 +87,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Redis.GetServer(this.Redis.GetCounters().EndPoint).DatabaseSize(this.Database.Database);
+				return this.Redis.GetServer(this.Redis.GetCounters().EndPoint).DatabaseSize(this.DatabaseId);
 			}
 		}
 
@@ -93,9 +97,9 @@ namespace Zongsoft.Externals.Redis
 			{
 				string addresses = string.Empty;
 
-				if(_setting.EndPoints.Count > 1)
+				if(_settings.Addresses.Count > 1)
 				{
-					foreach(var endPoint in _setting.EndPoints)
+					foreach(var endPoint in _settings.Addresses)
 					{
 						if(string.IsNullOrEmpty(addresses))
 							addresses += ", ";
@@ -107,18 +111,13 @@ namespace Zongsoft.Externals.Redis
 				}
 				else
 				{
-					addresses = _setting.EndPoints[0].ToString();
+					addresses = _settings.Addresses.First().ToString();
 				}
 
-				var databaseId = _setting.DefaultDatabase ?? 0;
-
-				if(_database != null)
-					databaseId = _database.Database;
-
-				if(_setting.Proxy == Proxy.None)
-					return addresses + "#" + databaseId;
+				if(_settings.UseTwemproxy)
+					return $"(Twemproxy){addresses}#{this.DatabaseId}";
 				else
-					return $"({_setting.Proxy}){addresses}#{databaseId}";
+					return addresses + "#" + this.DatabaseId;
 			}
 		}
 
@@ -126,26 +125,44 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return _isDisposed;
+				return _isDisposed != 0;
 			}
 		}
 
-		public StackExchange.Redis.ConfigurationOptions Settings
+		public int DatabaseId
 		{
 			get
 			{
-				return _setting;
+				var database = _database;
+
+				if(database == null)
+					return _settings.DatabaseId;
+				else
+					return database.Database;
 			}
 		}
 
-		protected RedisSubscriber Subscriber
+		public RedisServiceSettings Settings
 		{
 			get
 			{
-				if(_subscriber == null)
-					_subscriber = new RedisSubscriber(this.Redis.GetSubscriber());
+				return _settings;
+			}
+		}
 
-				return _subscriber;
+		public RedisSubscriber Subscriber
+		{
+			get
+			{
+				return _subscriber.Value;
+			}
+		}
+
+		public Common.ISequence Sequence
+		{
+			get
+			{
+				return _sequence.Value;
 			}
 		}
 
@@ -164,56 +181,23 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				if(_isDisposed)
+				if(_isDisposed != 0)
 					throw new ObjectDisposedException(nameof(RedisService));
 
 				if(_redis == null)
 				{
 					lock(_syncRoot)
 					{
-						if(_isDisposed)
+						if(_isDisposed != 0)
 							throw new ObjectDisposedException(nameof(RedisService));
 
 						if(_redis == null)
-							_redis = ConnectionMultiplexer.Connect(_setting);
+							_redis = ConnectionMultiplexer.Connect(_settings.InnerOptions);
 					}
 				}
 
 				return _redis;
 			}
-		}
-		#endregion
-
-		#region 获取集合
-		public IRedisDictionary GetDictionary(string name)
-		{
-			return this.GetCacheEntry(name, RedisEntryType.Dictionary, (key, first) => new RedisDictionary(key, _redisPool));
-		}
-
-		public IRedisDictionary GetDictionary(string name, IDictionary<string, string> items)
-		{
-			return this.GetCacheEntry(name, RedisEntryType.Dictionary, (key, first) =>
-			{
-				var result = new RedisDictionary(key, _redisPool);
-
-				if(first && items != null)
-				{
-					foreach(var item in items)
-						result.TryAdd(item.Key, item.Value);
-				}
-
-				return result;
-			});
-		}
-
-		public IRedisHashset GetHashset(string name)
-		{
-			return this.GetCacheEntry(name, RedisEntryType.Set, (key, first) => new RedisHashset(key, _redisPool));
-		}
-
-		public IRedisQueue GetQueue(string name)
-		{
-			return this.GetCacheEntry(name, RedisEntryType.List, (key, first) => new RedisQueue(key, _redisPool));
 		}
 		#endregion
 
@@ -231,29 +215,6 @@ namespace Zongsoft.Externals.Redis
 			return database != null;
 		}
 
-		public object GetEntry(string key)
-		{
-			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException(nameof(key));
-
-			var entryType = this.GetEntryType(key);
-
-			switch(entryType)
-			{
-				case RedisEntryType.Dictionary:
-					return this.GetDictionary(key);
-				case RedisEntryType.List:
-					return this.GetQueue(key);
-				case RedisEntryType.Set:
-				case RedisEntryType.SortedSet:
-					return this.GetHashset(key);
-				case RedisEntryType.String:
-					return this.GetValue(key);
-			}
-
-			return null;
-		}
-
 		public string GetValue(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
@@ -262,12 +223,12 @@ namespace Zongsoft.Externals.Redis
 			return this.Database.StringGet(key);
 		}
 
-		public IEnumerable<string> GetValues(params string[] keys)
+		public string[] GetValues(params string[] keys)
 		{
 			if(keys == null || keys.Length == 0)
 				throw new ArgumentNullException(nameof(keys));
 
-			return this.Database.StringGet(keys.Cast<RedisKey>().ToArray()).Cast<string>();
+			return this.Database.StringGet(keys.Cast<RedisKey>().ToArray()).Cast<string>().ToArray();
 		}
 
 		public string ExchangeValue(string key, string value)
@@ -310,6 +271,48 @@ namespace Zongsoft.Externals.Redis
 			return this.Database.StringSet(key, value, duration, requiredNotExists ? When.NotExists : When.Always);
 		}
 
+		public object GetEntry(string key)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			return this.GetEntry<object>(key, value => value);
+		}
+
+		public T GetEntry<T>(string key, Func<object, T> convert = null)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			if(convert == null)
+			{
+				convert = value =>
+				{
+					if(value == null)
+						return default(T);
+
+					return Zongsoft.Common.Convert.ConvertValue<T>(value);
+				};
+			}
+
+			var entryType = this.GetEntryType(key);
+
+			switch(entryType)
+			{
+				case RedisEntryType.Dictionary:
+					return convert(new RedisDictionary(key, this.Database));
+				case RedisEntryType.List:
+					return convert(new RedisQueue(key, this.Database));
+				case RedisEntryType.Set:
+				case RedisEntryType.SortedSet:
+					return convert(new RedisHashset(key, this.Database));
+				case RedisEntryType.String:
+					return convert(this.GetValue(key));
+			}
+
+			return convert(default(T));
+		}
+
 		public RedisEntryType GetEntryType(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
@@ -335,7 +338,7 @@ namespace Zongsoft.Externals.Redis
 			return RedisEntryType.None;
 		}
 
-		public TimeSpan? GetEntryExpire(string key)
+		public TimeSpan? GetEntryExpiry(string key)
 		{
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
@@ -343,20 +346,26 @@ namespace Zongsoft.Externals.Redis
 			return this.Database.KeyTimeToLive(key);
 		}
 
-		public bool SetEntryExpire(string key, TimeSpan duration)
+		public bool SetEntryExpiry(string key, TimeSpan duration)
 		{
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			return this.Database.KeyExpire(key, duration);
+			if(duration > TimeSpan.Zero)
+				return this.Database.KeyExpire(key, duration);
+			else
+				return this.Database.KeyPersist(key);
 		}
 
-		public bool SetEntryExpire(string key, DateTime expires)
+		public bool SetEntryExpiry(string key, DateTime expires)
 		{
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			return this.Database.KeyExpire(key, expires);
+			if(expires.Year >= 2000)
+				return this.Database.KeyExpire(key, expires);
+			else
+				return this.Database.KeyPersist(key);
 		}
 
 		public bool Rename(string oldKey, string newKey)
@@ -372,7 +381,7 @@ namespace Zongsoft.Externals.Redis
 
 		public void Clear()
 		{
-			this.Redis.GetServer(this.Redis.GetCounters().EndPoint).FlushDatabase(this.Database.Database);
+			this.Redis.GetServer(this.Redis.GetCounters().EndPoint).FlushDatabase(this.DatabaseId);
 		}
 
 		public bool Remove(string key)
@@ -467,39 +476,6 @@ namespace Zongsoft.Externals.Redis
 		}
 		#endregion
 
-		#region 私有方法
-		private T GetCacheEntry<T>(string name, RedisEntryType entryType, Func<string, bool, T> createThunk) where T : RedisObjectBase
-		{
-			if(string.IsNullOrWhiteSpace(name))
-				throw new ArgumentNullException("name");
-
-			//获取指定名称的条目类型
-			var storedEntryType = this.GetEntryType(name);
-
-			if(storedEntryType != RedisEntryType.None && storedEntryType != entryType)
-				throw new RedisException("The specified name entry is invalid entry.");
-
-			//确保缓存容器创建完成
-			if(_caches == null)
-				System.Threading.Interlocked.CompareExchange(ref _caches, new ConcurrentDictionary<int, Zongsoft.Collections.ObjectCache<RedisObjectBase>>(), null);
-
-			//获取当前数据库的缓存器
-			var cache = _caches.GetOrAdd(_settings.DatabaseId, new Collections.ObjectCache<RedisObjectBase>());
-
-			return (T)cache.Get(name, key =>
-			{
-				var redisObject = createThunk(key, storedEntryType == RedisEntryType.None);
-
-				redisObject.Disposed += (_, __) =>
-				{
-					cache.Remove(key);
-				};
-
-				return redisObject;
-			});
-		}
-		#endregion
-
 		#region 缓存接口
 		event EventHandler<Runtime.Caching.CacheChangedEventArgs> Runtime.Caching.ICache.Changed
 		{
@@ -515,12 +491,12 @@ namespace Zongsoft.Externals.Redis
 
 		TimeSpan? Zongsoft.Runtime.Caching.ICache.GetExpiry(string key)
 		{
-			return this.GetEntryExpire(key);
+			return this.GetEntryExpiry(key);
 		}
 
 		void Zongsoft.Runtime.Caching.ICache.SetExpiry(string key, TimeSpan duration)
 		{
-			this.SetEntryExpire(key, duration);
+			this.SetEntryExpiry(key, duration);
 		}
 
 		T Zongsoft.Runtime.Caching.ICache.GetValue<T>(string key)
@@ -544,16 +520,20 @@ namespace Zongsoft.Externals.Redis
 			if(valueCreator == null)
 				return this.GetEntry(key);
 
+			//获取指定的键值，即指定键对应的条目对象
 			var result = this.GetEntry(key);
 
+			//只有当指定的键不存在，才需要进行后续的设置操作
 			if(result == null)
 			{
 				var entry = valueCreator(key);
 
-				if(this.Database.StringSet(key, Utility.GetStoreString(entry.Value), entry.Expiry, When.NotExists))
+				//当指定的键不存在则设置其新值
+				if(this.SetValueCore(key, entry.Value, entry.Expiry ?? TimeSpan.Zero, true))
 					return entry.Value;
-				else
-					return this.GetEntry(key);
+
+				//再次获取一遍指定的键值
+				return this.GetEntry(key);
 			}
 
 			return result;
@@ -564,10 +544,7 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			if(value == null)
-				return this.Database.KeyDelete(key);
-			else
-				return this.Database.StringSet(key, value.ToString());
+			return this.SetValueCore(key, value, TimeSpan.Zero);
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, TimeSpan duration, bool requiredNotExists = false)
@@ -575,207 +552,140 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			if(value == null)
-				return this.Database.KeyDelete(key);
-			else
-				return this.Database.StringSet(key, value.ToString(), duration, requiredNotExists ? When.NotExists : When.Always);
-
-			if(value == null)
-				return this.Remove(key);
-
-			if(value is RedisObjectBase)
-				return false;
-
-			IEnumerable<KeyValuePair<string, string>> dictionary;
-
-			if(this.TryGetDictionary(value, out dictionary))
-			{
-				if(requiredNotExists && this.Exists(key))
-					return false;
-
-				var redisDictionary = this.GetDictionary(key);
-
-				redisDictionary.SetRange(dictionary);
-
-				if(duration > TimeSpan.Zero)
-					this.SetEntryExpire(key, duration);
-
-				return true;
-			}
-
-			ICollection<string> collection;
-
-			if(this.TryGetCollection(value, out collection) && collection.Count > 0)
-			{
-				if(requiredNotExists && this.Exists(key))
-					return false;
-
-				var redisHashset = this.GetHashset(key);
-				string[] values = collection as string[];
-
-				if(values == null)
-				{
-					int index = 0;
-					values = new string[collection.Count];
-
-					foreach(var item in collection)
-						values[index++] = item;
-				}
-
-				redisHashset.AddRange(values);
-
-				if(duration > TimeSpan.Zero)
-					this.SetEntryExpire(key, duration);
-
-				return true;
-			}
-
-			return this.SetValue(key, Utility.GetStoreString(value), duration, requiredNotExists);
+			return this.SetValueCore(key, value, duration, requiredNotExists);
 		}
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, DateTime expires, bool requiredNotExists = false)
 		{
 			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException("key");
+				throw new ArgumentNullException(nameof(key));
+
+			return this.SetValueCore(key, value, expires - DateTime.Now, requiredNotExists);
+		}
+
+		private bool SetValueCore(string key, object value, TimeSpan duration, bool requiredNotExists = false)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
 
 			if(value == null)
-				return this.Remove(key);
+				return this.Database.KeyDelete(key);
 
 			if(value is RedisObjectBase)
+				return true;
+
+			if(requiredNotExists && this.Database.KeyExists(key))
 				return false;
 
-			IEnumerable<KeyValuePair<string, string>> dictionary;
+			When condition = requiredNotExists ? When.NotExists : When.Always;
 
-			if(this.TryGetDictionary(value, out dictionary))
+			Action<IBatch> complete = batch =>
 			{
-				if(requiredNotExists && this.Exists(key))
-					return false;
+				if(duration > TimeSpan.Zero)
+					batch.KeyExpireAsync(key, duration);
+			};
 
-				var redisDictionary = this.GetDictionary(key);
+			var set = value as ISet<string>;
 
-				redisDictionary.SetRange(dictionary);
+			if(set != null)
+				return this.Database.SetAdd(key, set.Cast<RedisValue>().ToArray()) > 0;
 
-				if(expires > DateTime.Now)
-					this.SetEntryExpire(key, expires);
-
+			if(this.Batch<DictionaryEntry>(value as IDictionary,
+							(batch, entry) =>
+							{
+								if(entry.Key != null)
+								{
+									if(entry.Value == null)
+										batch.HashDeleteAsync(key, entry.Key.ToString());
+									else
+										batch.HashSetAsync(key, entry.Key.ToString(), Utility.GetStoredValue(entry.Value), condition);
+								}
+							}, complete) ||
+			   this.Batch<KeyValuePair<string, string>>(value as IDictionary<string, string>,
+							(batch, entry) =>
+							{
+								if(entry.Key != null)
+								{
+									if(entry.Value == null)
+										batch.HashDeleteAsync(key, entry.Key);
+									else
+										batch.HashSetAsync(key, entry.Key, entry.Value, condition);
+								}
+							}, complete) ||
+			   this.Batch<KeyValuePair<string, object>>(value as IDictionary<string, object>,
+							(batch, entry) =>
+							{
+								if(entry.Key != null)
+								{
+									if(entry.Value == null)
+										batch.HashDeleteAsync(key, entry.Key);
+									else
+										batch.HashSetAsync(key, entry.Key, Utility.GetStoredValue(entry.Value), condition);
+								}
+							}, complete) ||
+			   this.Batch<object>(value as Zongsoft.Collections.IQueue,
+							(batch, item) =>
+							{
+								if(item != null)
+									batch.ListRightPushAsync(key, Utility.GetStoredValue(item), condition);
+							}, complete))
 				return true;
-			}
 
-			ICollection<string> collection;
-
-			if(this.TryGetCollection(value, out collection) && collection.Count > 0)
-			{
-				if(requiredNotExists && this.Exists(key))
-					return false;
-
-				var redisHashset = this.GetHashset(key);
-				string[] values = collection as string[];
-
-				if(values == null)
-				{
-					int index = 0;
-					values = new string[collection.Count];
-
-					foreach(var item in collection)
-						values[index++] = item;
-				}
-
-				redisHashset.AddRange(values);
-
-				if(expires > DateTime.Now)
-					this.SetEntryExpire(key, expires);
-
-				return true;
-			}
-
-			return this.SetValue(key, Utility.GetStoreString(value), (expires - DateTime.Now), requiredNotExists);
+			if(duration > TimeSpan.Zero)
+				return this.Database.StringSet(key, value.ToString(), duration, condition);
+			else
+				return this.Database.StringSet(key, value.ToString(), null, condition);
 		}
 
-		private bool TryGetDictionary(object value, out IEnumerable<KeyValuePair<string, string>> result)
+		private bool Batch<T>(IEnumerable items, Action<IBatch, T> iterator, Action<IBatch> complete = null)
 		{
-			result = null;
-
-			if(value == null)
+			if(items == null || iterator == null)
 				return false;
 
-			if(value is IEnumerable<KeyValuePair<string, string>>)
+			IBatch batch = null;
+
+			foreach(var item in items)
 			{
-				result = (IEnumerable<KeyValuePair<string, string>>)value;
-				return true;
+				if(item == null)
+					continue;
+
+				if(batch == null)
+					batch = this.Database.CreateBatch();
+
+				iterator(batch, (T)item);
 			}
 
-			var dictionary = value as IDictionary;
-
-			if(dictionary != null && dictionary.Count > 0)
+			if(batch != null)
 			{
-				var items = new List<KeyValuePair<string, string>>(dictionary.Count);
+				if(complete != null)
+					complete(batch);
 
-				foreach(var entryKey in dictionary.Keys)
-				{
-					if(entryKey != null && dictionary[entryKey] != null)
-						items.Add(new KeyValuePair<string, string>(entryKey.ToString(), dictionary[entryKey].ToString()));
-				}
-
-				result = items;
-				return true;
+				batch.Execute();
 			}
 
-			return false;
-		}
-
-		private bool TryGetCollection(object value, out ICollection<string> result)
-		{
-			result = null;
-
-			if(value == null)
-				return false;
-
-			if(value is ICollection<string>)
-			{
-				result = (ICollection<string>)value;
-				return true;
-			}
-
-			var collection = value as ICollection;
-
-			if(collection != null && collection.Count > 0)
-			{
-				var items = new List<string>(collection.Count);
-
-				foreach(var item in collection)
-				{
-					if(item != null)
-						items.Add(item.ToString());
-				}
-
-				result = items;
-				return true;
-			}
-
-			return false;
+			return batch != null;
 		}
 		#endregion
 
 		#region 获取缓存
-		Zongsoft.Runtime.Caching.ICache Zongsoft.Runtime.Caching.ICacheProvider.GetCache(string name, bool createNotExists = false)
+		public Zongsoft.Runtime.Caching.ICache GetCache(string name, bool createNotExists)
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				return this;
 
-			if(!createNotExists)
-			{
-				if(!this.Exists(name.Trim()))
-					return null;
-			}
+			//如果 createNotExists 参数为假(即当指定名称的字典不存在也无需创建一个)并且指定的字典名称不存在，则返回空(null)
+			if(!createNotExists && !this.Exists(name))
+				return null;
 
-			return this.GetDictionary(name.Trim()) as Zongsoft.Runtime.Caching.ICache;
+			//返回指定名称的字典对象
+			return new RedisDictionary(name, this.Database);
 		}
 		#endregion
 
 		#region 获取队列
-		Zongsoft.Collections.IQueue Zongsoft.Collections.IQueueProvider.GetQueue(string name)
+		public Zongsoft.Collections.IQueue GetQueue(string name)
 		{
-			return this.GetQueue(name);
+			return this.GetEntry<RedisQueue>(name);
 		}
 		#endregion
 
@@ -788,21 +698,20 @@ namespace Zongsoft.Externals.Redis
 
 		protected virtual void Dispose(bool disposing)
 		{
-			if(_isDisposed)
+			var isDisposed = Interlocked.Exchange(ref _isDisposed, 1);
+
+			if(isDisposed != 0)
 				return;
 
-			_isDisposed = true;
-			_database = null;
+			lock(_syncRoot)
+			{
+				_database = null;
 
-			var redis = Interlocked.Exchange(ref _redis, null);
+				var redis = Interlocked.Exchange(ref _redis, null);
 
-			if(redis != null)
-				redis.Dispose();
-
-			var caches = _caches;
-
-			if(caches != null)
-				caches.Clear();
+				if(redis != null)
+					redis.Dispose();
+			}
 		}
 		#endregion
 	}
