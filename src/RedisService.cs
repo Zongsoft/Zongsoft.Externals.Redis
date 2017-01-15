@@ -64,10 +64,10 @@ namespace Zongsoft.Externals.Redis
 					connectionString = configuration.DefaultConnectionString;
 			}
 
-			_settings = new RedisServiceSettings(ConfigurationOptions.Parse(connectionString));
 			_syncRoot = new object();
-			_subscriber = new Lazy<Externals.Redis.RedisSubscriber>(true);
-			_sequence = new Lazy<Externals.Redis.RedisSequence>(true);
+			_settings = new RedisServiceSettings(ConfigurationOptions.Parse(connectionString));
+			_subscriber = new Lazy<RedisSubscriber>(() => new RedisSubscriber(this.Redis.GetSubscriber()), true);
+			_sequence = new Lazy<RedisSequence>(() => new RedisSequence(this), true);
 		}
 
 		public RedisService(string connectionString)
@@ -75,10 +75,10 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(connectionString))
 				connectionString = "127.0.0.1";
 
-			_settings = new RedisServiceSettings(ConfigurationOptions.Parse(connectionString));
 			_syncRoot = new object();
-			_subscriber = new Lazy<Externals.Redis.RedisSubscriber>(true);
-			_sequence = new Lazy<Externals.Redis.RedisSequence>(true);
+			_settings = new RedisServiceSettings(ConfigurationOptions.Parse(connectionString));
+			_subscriber = new Lazy<RedisSubscriber>(() => new RedisSubscriber(this.Redis.GetSubscriber()), true);
+			_sequence = new Lazy<RedisSequence>(() => new RedisSequence(this), true);
 		}
 		#endregion
 
