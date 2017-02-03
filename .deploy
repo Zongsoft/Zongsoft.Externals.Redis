@@ -1,0 +1,4 @@
+src/Zongsoft.Externals.Redis.plugin
+src/Zongsoft.Externals.Redis.option
+./src/bin/$(Edition)/Zongsoft.Externals.Redis.*
+./src/bin/$(Edition)/StackExchange.*
