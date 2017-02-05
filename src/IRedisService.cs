@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -111,7 +111,7 @@ namespace Zongsoft.Externals.Redis
 		/// <returns>返回指定键的旧值，如果为空(null)则说明没有旧值，即指定的键在此之前还不存在。</returns>
 		string ExchangeValue(string key, string value, TimeSpan duration);
 
-		bool SetValue(string key, string value);
+		bool SetValue(string key, string value, bool requiredNotExists = false);
 		bool SetValue(string key, string value, TimeSpan duration, bool requiredNotExists = false);
 
 		/// <summary>

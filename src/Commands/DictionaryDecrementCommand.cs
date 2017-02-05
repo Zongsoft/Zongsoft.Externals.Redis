@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -48,9 +48,30 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length < 2)
 				throw new Zongsoft.Services.CommandException("The arguments is not enough.");
 
-			int interval = context.Expression.Options.GetValue<int>("interval");
+			if(context.Expression.Arguments.Length % 2 != 0)
+				throw new Zongsoft.Services.CommandException("The count arguments must be an even number.");
 
-			return this.Redis.GetEntry<IRedisDictionary>(context.Expression.Arguments[0]).Decrement(context.Expression.Arguments[1], interval);
+			var interval = context.Expression.Options.GetValue<int>("interval");
+			var result = new List<long>(context.Expression.Arguments.Length / 2);
+
+			for(int i = 0; i < context.Expression.Arguments.Length / 2; i++)
+			{
+				var dictionary = this.Redis.GetEntry<IRedisDictionary>(context.Expression.Arguments[i * 2]);
+
+				if(dictionary == null)
+				{
+					context.Error.WriteLine($"The '{context.Expression.Arguments[i * 2]}' dictionary is not existed.");
+					return 0;
+				}
+
+				result.Add(dictionary.Decrement(context.Expression.Arguments[i * 2 + 1], interval));
+				context.Output.WriteLine(result.ToString());
+			}
+
+			if(result.Count == 1)
+				return result[0];
+			else
+				return result;
 		}
 		#endregion
 	}

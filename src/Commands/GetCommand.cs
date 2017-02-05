@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -26,7 +26,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
@@ -48,10 +47,49 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length < 1)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
-			if(context.Expression.Arguments.Length == 1)
-				return this.Redis.GetValue(context.Expression.Arguments[0]);
+			var result = new List<object>(context.Expression.Arguments.Length);
 
-			return this.Redis.GetValues(context.Expression.Arguments);
+			for(int i = 0; i < context.Expression.Arguments.Length; i++)
+			{
+				var entry = this.Redis.GetEntry(context.Expression.Arguments[i]);
+
+				if(entry == null)
+				{
+					context.Output.WriteLine(Services.CommandOutletColor.Red, $"The '{context.Expression.Arguments[i]}' entry is not existed.");
+				}
+				else
+				{
+					result.Add(entry);
+
+					var entryType = this.Redis.GetEntryType(context.Expression.Arguments[i]);
+					context.Output.Write(Services.CommandOutletColor.DarkGray, $"[{entryType}] ");
+
+					switch(entryType)
+					{
+						case RedisEntryType.String:
+							context.Output.WriteLine(result[i]);
+							break;
+						case RedisEntryType.Dictionary:
+							context.Output.WriteLine(Services.CommandOutletColor.DarkYellow, $"The '{context.Expression.Arguments[i]}' dictionary have {((IRedisDictionary)entry).Count} entries.");
+							break;
+						case RedisEntryType.List:
+							context.Output.WriteLine(Services.CommandOutletColor.DarkYellow, $"The '{context.Expression.Arguments[i]}' list(queue) have {((IRedisQueue)entry).Count} entries.");
+							break;
+						case RedisEntryType.Set:
+						case RedisEntryType.SortedSet:
+							context.Output.WriteLine(Services.CommandOutletColor.DarkYellow, $"The '{context.Expression.Arguments[i]}' hashset have {((IRedisHashset)entry).Count} entries.");
+							break;
+						default:
+							context.Output.WriteLine();
+							break;
+					}
+				}
+			}
+
+			if(result.Count == 1)
+				return result[0];
+			else
+				return result;
 		}
 		#endregion
 	}

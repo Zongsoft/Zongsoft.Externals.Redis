@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -49,19 +49,16 @@ namespace Zongsoft.Externals.Redis.Commands
 
 			var hashset = this.Redis.GetEntry<IRedisHashset>(context.Expression.Arguments[0]);
 
-			if(context.Expression.Arguments.Length == 2)
+			if(hashset == null)
 			{
-				hashset.Add(context.Expression.Arguments[1]);
-			}
-			else
-			{
-				var items = new string[context.Expression.Arguments.Length - 1];
-				Array.Copy(context.Expression.Arguments, 1, items, 0, items.Length);
-
-				hashset.AddRange(items);
+				context.Error.WriteLine($"The '{context.Expression.Arguments[0]}' hashset is not existed.");
+				return 0;
 			}
 
-			return null;
+			var items = new string[context.Expression.Arguments.Length - 1];
+			Array.Copy(context.Expression.Arguments, 1, items, 0, items.Length);
+
+			return hashset.AddRange(items);
 		}
 		#endregion
 	}

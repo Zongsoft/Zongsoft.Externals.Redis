@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -49,15 +49,35 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length < 1)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
+			var count = context.Expression.Options.GetValue<int>("count");
 			var index = context.Expression.Options.GetValue<int>("index");
-			var queue = this.Redis.GetEntry<IRedisQueue>(context.Expression.Arguments[0]);
+			var result = new List<string>(context.Expression.Arguments.Length * count);
 
-			int count;
+			for(int i = 0; i < context.Expression.Arguments.Length; i++)
+			{
+				var queue = this.Redis.GetEntry<IRedisQueue>(context.Expression.Arguments[0]);
 
-			if(context.Expression.Options.TryGetValue<int>("count", out count))
-				return queue.Take(index, count);
+				if(queue == null)
+				{
+					context.Error.WriteLine($"The '{context.Expression.Arguments[i]}' queue is not existed.");
+					return null;
+				}
 
-			return queue.Take(index);
+				//打印当前队列名
+				context.Output.WriteLine(Services.CommandOutletColor.Magenta, $"Dequeued entries from 'context.Expression.Arguments[i]' queue:");
+
+				var items = queue.Take(index, count);
+
+				foreach(var item in items)
+				{
+					result.Add((string)item);
+					context.Output.WriteLine(item);
+				}
+
+				context.Output.WriteLine();
+			}
+
+			return result;
 		}
 		#endregion
 	}

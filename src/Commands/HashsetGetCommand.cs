@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -29,9 +29,6 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	[Zongsoft.Services.CommandOption("all", Description = "${Text.MapGetCommand.All}")]
-	[Zongsoft.Services.CommandOption("count", Type = typeof(int), DefaultValue = 25, Description = "${Text.MapGetCommand.Count}")]
-	[Zongsoft.Services.CommandOption("pattern", Type = typeof(string), Description = "${Text.MapGetCommand.Pattern}")]
 	public class HashsetGetCommand : RedisCommandBase
 	{
 		#region 构造函数
@@ -50,7 +47,30 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			return this.Redis.GetEntry<IRedisHashset>(context.Expression.Arguments[0]);
+			var result = new IRedisHashset[context.Expression.Arguments.Length];
+
+			for(var i = 0; i < context.Expression.Arguments.Length; i++)
+			{
+				result[i] = this.Redis.GetEntry<IRedisHashset>(context.Expression.Arguments[i]);
+
+				if(result[i] == null)
+				{
+					context.Error.WriteLine($"The '{context.Expression.Arguments[i]}' hashset is not existed.");
+					return null;
+				}
+
+				context.Output.WriteLine(Services.CommandOutletColor.Magenta, $"The '{context.Expression.Arguments[i]}' hashset have {result[i].Count} entries:");
+
+				foreach(var item in result[i])
+					context.Output.WriteLine(item);
+
+				context.Output.WriteLine();
+			}
+
+			if(result.Length == 1)
+				return result[0];
+			else
+				return result;
 		}
 		#endregion
 	}

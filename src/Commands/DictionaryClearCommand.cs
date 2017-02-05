@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -42,20 +42,20 @@ namespace Zongsoft.Externals.Redis.Commands
 		#endregion
 
 		#region 执行方法
-		protected override object OnExecute(Services.CommandContext parameter)
+		protected override object OnExecute(Services.CommandContext context)
 		{
-			if(parameter.Expression.Arguments.Length < 1)
+			if(context.Expression.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			foreach(var arg in parameter.Expression.Arguments)
+			foreach(var arg in context.Expression.Arguments)
 			{
 				var dictionary = this.Redis.GetEntry<IRedisDictionary>(arg);
 
-				if(dictionary != null)
+				if(dictionary == null)
+					context.Error.WriteLine($"The '{arg}' dictionary is not existed.");
+				else
 					dictionary.Clear();
 			}
-
-			this.Redis.RemoveMany(parameter.Expression.Arguments);
 
 			return null;
 		}

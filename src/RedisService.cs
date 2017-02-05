@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2015 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -255,12 +255,12 @@ namespace Zongsoft.Externals.Redis
 			return result;
 		}
 
-		public bool SetValue(string key, string value)
+		public bool SetValue(string key, string value, bool requiredNotExists = false)
 		{
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			return this.Database.StringSet(key, value);
+			return this.Database.StringSet(key, value, null, requiredNotExists ? When.NotExists : When.Always);
 		}
 
 		public bool SetValue(string key, string value, TimeSpan duration, bool requiredNotExists = false)
@@ -268,7 +268,10 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			return this.Database.StringSet(key, value, duration, requiredNotExists ? When.NotExists : When.Always);
+			if(duration > TimeSpan.Zero)
+				return this.Database.StringSet(key, value, duration, requiredNotExists ? When.NotExists : When.Always);
+			else
+				return this.Database.StringSet(key, value, null, requiredNotExists ? When.NotExists : When.Always);
 		}
 
 		public object GetEntry(string key)

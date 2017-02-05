@@ -69,7 +69,7 @@ namespace Zongsoft.Externals.Redis.Configuration
 			}
 		}
 
-		[OptionConfigurationProperty(XML_CONNECTIONSTRINGS_COLLECTION, ElementName = XML_CONNECTIONSTRING_ELEMENT, Behavior = OptionConfigurationPropertyBehavior.IsRequired)]
+		[OptionConfigurationProperty(XML_CONNECTIONSTRINGS_COLLECTION, Type = typeof(SettingElementCollection), ElementName = XML_CONNECTIONSTRING_ELEMENT, Behavior = OptionConfigurationPropertyBehavior.IsRequired)]
 		public ISettingsProvider ConnectionStrings
 		{
 			get

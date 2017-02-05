@@ -29,14 +29,14 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class DictionarySetCommand : RedisCommandBase
+	public class CountCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public DictionarySetCommand() : base("Set")
+		public CountCommand() : base("Count")
 		{
 		}
 
-		public DictionarySetCommand(IRedisService redis) : base(redis, "Set")
+		public CountCommand(IRedisService redis) : base(redis, "Count")
 		{
 		}
 		#endregion
@@ -44,33 +44,9 @@ namespace Zongsoft.Externals.Redis.Commands
 		#region 执行方法
 		protected override object OnExecute(Services.CommandContext context)
 		{
-			if(context.Expression.Arguments.Length < 3)
-				throw new Zongsoft.Services.CommandException("Missing arguments.");
-
-			var dictionary = this.Redis.GetEntry<IRedisDictionary>(context.Expression.Arguments[0]);
-
-			if(dictionary == null)
-			{
-				context.Error.WriteLine($"The '{context.Expression.Arguments[0]}' dictionary is not existed.");
-				return false;
-			}
-
-			if(context.Expression.Arguments.Length == 3)
-			{
-				dictionary[context.Expression.Arguments[1]] = context.Expression.Arguments[2];
-				return true;
-			}
-
-			var items = new KeyValuePair<string, string>[(context.Expression.Arguments.Length - 1) / 2];
-
-			for(int i = 0; i < items.Length; i++)
-			{
-				items[i] = new KeyValuePair<string,string>(context.Expression.Arguments[i * 2 + 1], context.Expression.Arguments[i * 2 + 2]);
-			}
-
-			dictionary.SetRange(items);
-
-			return true;
+			var count = this.Redis.Count;
+			context.Output.WriteLine(count.ToString());
+			return count;
 		}
 		#endregion
 	}

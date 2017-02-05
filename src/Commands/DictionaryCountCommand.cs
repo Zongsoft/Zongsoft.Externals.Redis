@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -47,17 +47,26 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length < 1)
 				throw new Services.CommandException("Missing arguments.");
 
-			if(context.Expression.Arguments.Length == 1)
-				return this.Redis.GetEntry<IRedisDictionary>(context.Expression.Arguments[0]).Count;
-
 			var result = new long[context.Expression.Arguments.Length];
 
 			for(int i = 0; i < result.Length; i++)
 			{
-				result[i] = this.Redis.GetEntry<IRedisDictionary>(context.Expression.Arguments[i]).Count;
+				var dictionary = this.Redis.GetEntry<IRedisDictionary>(context.Expression.Arguments[i]);
+
+				if(dictionary == null)
+				{
+					context.Error.WriteLine($"The '{context.Expression.Arguments[i]}' dictionary is not existed.");
+					return 0;
+				}
+
+				result[i] = dictionary.Count;
+				context.Output.WriteLine(result[i].ToString());
 			}
 
-			return result;
+			if(result.Length == 1)
+				return result[0];
+			else
+				return result;
 		}
 		#endregion
 	}

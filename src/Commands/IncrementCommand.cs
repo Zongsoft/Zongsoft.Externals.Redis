@@ -2,7 +2,7 @@
  * Authors:
  *   钟峰(Popeye Zhong) <9555843@qq.com>
  *
- * Copyright (C) 2014-2016 Zongsoft Corporation <http://www.zongsoft.com>
+ * Copyright (C) 2014-2017 Zongsoft Corporation <http://www.zongsoft.com>
  *
  * This file is part of Zongsoft.Externals.Redis.
  *
@@ -49,18 +49,18 @@ namespace Zongsoft.Externals.Redis.Commands
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
 			int interval = context.Expression.Options.GetValue<int>("interval");
-
-			if(context.Expression.Arguments.Length == 1)
-				return this.Redis.Increment(context.Expression.Arguments[0], interval);
-
 			var result = new long[context.Expression.Arguments.Length];
 
 			for(int i = 0; i < context.Expression.Arguments.Length; i++)
 			{
 				result[i] = this.Redis.Increment(context.Expression.Arguments[i], interval);
+				context.Output.WriteLine(result[i].ToString());
 			}
 
-			return result;
+			if(result.Length == 1)
+				return result[0];
+			else
+				return result;
 		}
 		#endregion
 	}

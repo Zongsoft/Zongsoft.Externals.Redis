@@ -45,6 +45,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\CountCommand.cs" />
     <Compile Include="Commands\DecrementCommand.cs" />
     <Compile Include="Commands\DictionaryClearCommand.cs" />
     <Compile Include="Commands\DictionaryCountCommand.cs" />
