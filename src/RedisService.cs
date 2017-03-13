@@ -685,10 +685,43 @@ namespace Zongsoft.Externals.Redis
 		}
 		#endregion
 
-		#region 获取队列
-		public Zongsoft.Collections.IQueue GetQueue(string name)
+		#region 显式实现
+		Zongsoft.Collections.IQueue Zongsoft.Collections.IQueueProvider.GetQueue(string name)
 		{
-			return this.GetEntry<RedisQueue>(name);
+			return this.GetQueue(name);
+		}
+		#endregion
+
+		#region 获取对象
+		public IRedisQueue GetQueue(string name)
+		{
+			return this.GetRedisObject<IRedisQueue>(name, () => new RedisQueue(name, this.Database), RedisEntryType.List);
+		}
+
+		public IRedisHashset GetHashset(string name)
+		{
+			return this.GetRedisObject<IRedisHashset>(name, () => new RedisHashset(name, this.Database), RedisEntryType.Set, RedisEntryType.SortedSet);
+		}
+
+		public IRedisDictionary GetDictionary(string name)
+		{
+			return this.GetRedisObject<IRedisDictionary>(name, () => new RedisDictionary(name, this.Database), RedisEntryType.Dictionary);
+		}
+
+		private T GetRedisObject<T>(string name, Func<T> valueFactory, params RedisEntryType[] types)
+		{
+			if(string.IsNullOrWhiteSpace(name))
+				throw new ArgumentNullException(nameof(name));
+
+			if(valueFactory == null)
+				throw new ArgumentNullException(nameof(valueFactory));
+
+			var actualType = this.GetEntryType(name);
+
+			if(actualType != RedisEntryType.None && !types.Contains(actualType))
+				throw new InvalidOperationException($"The entry type is {actualType}, it isn't expects.");
+
+			return valueFactory();
 		}
 		#endregion
 

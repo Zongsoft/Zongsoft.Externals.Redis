@@ -127,6 +127,10 @@ namespace Zongsoft.Externals.Redis
 		bool SetEntryExpiry(string key, TimeSpan duration);
 		bool SetEntryExpiry(string key, DateTime expires);
 
+		new IRedisQueue GetQueue(string name);
+		IRedisHashset GetHashset(string name);
+		IRedisDictionary GetDictionary(string name);
+
 		void Clear();
 		bool Remove(string key);
 		void RemoveMany(params string[] keys);

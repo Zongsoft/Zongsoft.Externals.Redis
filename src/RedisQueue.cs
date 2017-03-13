@@ -120,7 +120,7 @@ namespace Zongsoft.Externals.Redis
 				//激发“Dequeued”事件
 				this.OnDequeued(new Zongsoft.Collections.DequeuedEventArgs(result.ToString(), false, Collections.CollectionRemovedReason.Remove));
 
-				yield return result;
+				yield return result.ToString();
 			}
 		}
 
