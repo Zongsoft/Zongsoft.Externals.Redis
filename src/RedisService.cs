@@ -58,7 +58,7 @@ namespace Zongsoft.Externals.Redis
 
 			if(options != null)
 			{
-				var configuration = options.GetOptionObject("/Externals/Redis") as Configuration.IRedisConfiguration;
+				var configuration = options.GetOptionValue("/Externals/Redis") as Configuration.IRedisConfiguration;
 
 				if(configuration != null)
 					connectionString = configuration.DefaultConnectionString;
