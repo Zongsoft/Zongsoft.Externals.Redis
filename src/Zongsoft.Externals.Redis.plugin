@@ -40,6 +40,7 @@
 		<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.SetCommand, Zongsoft.Externals.Redis" />
 		<object name="Count" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.CountCommand, Zongsoft.Externals.Redis" />
 		<object name="Remove" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.RemoveCommand, Zongsoft.Externals.Redis" />
+		<object name="GetKeys" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.GetKeysCommand, Zongsoft.Externals.Redis" />
 		<object name="Increment" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.IncrementCommand, Zongsoft.Externals.Redis" />
 		<object name="Decrement" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DecrementCommand, Zongsoft.Externals.Redis" />
 

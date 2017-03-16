@@ -81,6 +81,13 @@ namespace Zongsoft.Externals.Redis
 		bool Use(int databaseId);
 
 		/// <summary>
+		/// 查找当前库中的键名集。
+		/// </summary>
+		/// <param name="pattern">指定要查找的模式。</param>
+		/// <returns>返回符合指定模式的键名集。</returns>
+		IEnumerable<string> GetKeys(string pattern);
+
+		/// <summary>
 		/// 获取指定键对应的字符串值。
 		/// </summary>
 		/// <param name="key">指定的键。</param>

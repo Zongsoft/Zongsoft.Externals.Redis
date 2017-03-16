@@ -61,7 +61,7 @@ namespace Zongsoft.Externals.Redis
 				var configuration = options.GetOptionValue("/Externals/Redis") as Configuration.IRedisConfiguration;
 
 				if(configuration != null)
-					connectionString = configuration.DefaultConnectionString;
+					connectionString = configuration.ConnectionString;
 			}
 
 			_syncRoot = new object();
@@ -87,7 +87,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Redis.GetServer(this.Redis.GetCounters().EndPoint).DatabaseSize(this.DatabaseId);
+				return this.Redis.GetServer(_settings.Addresses[0]).DatabaseSize(this.DatabaseId);
 			}
 		}
 
@@ -213,6 +213,11 @@ namespace Zongsoft.Externals.Redis
 				_database = database;
 
 			return database != null;
+		}
+
+		public IEnumerable<string> GetKeys(string pattern)
+		{
+			return this.Redis.GetServer(_settings.Addresses[0]).Keys(this.DatabaseId, pattern, 20, CommandFlags.None).Select(p => p.ToString());
 		}
 
 		public string GetValue(string key)

@@ -54,6 +54,7 @@
     <Compile Include="Commands\DictionaryIncrementCommand.cs" />
     <Compile Include="Commands\DictionaryRemoveCommand.cs" />
     <Compile Include="Commands\DictionarySetCommand.cs" />
+    <Compile Include="Commands\GetKeysCommand.cs" />
     <Compile Include="Commands\GetCommand.cs" />
     <Compile Include="Commands\HashsetClearCommand.cs" />
     <Compile Include="Commands\HashsetCountCommand.cs" />
