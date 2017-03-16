@@ -3,10 +3,13 @@
 <options>
 	<option path="/Externals">
 		<redis redis.type="Zongsoft.Externals.Redis.Configuration.RedisConfiguration, Zongsoft.Externals.Redis"
-		       defaultConnection="localhost">
-			<connectionStrings>
-				<connectionString name="localhost" value="127.0.0.1" />
-			</connectionStrings>
+		       connectionPath="/Externals/Redis/ConnectionStrings['localhost']">
 		</redis>
+	</option>
+
+	<option path="/Externals/Redis">
+		<connectionStrings>
+			<connectionString name="localhost" value="127.0.0.1:6379, password=" />
+		</connectionStrings>
 	</option>
 </options>

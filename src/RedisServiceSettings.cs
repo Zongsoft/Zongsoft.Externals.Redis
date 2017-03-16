@@ -48,7 +48,7 @@ namespace Zongsoft.Externals.Redis
 		#endregion
 
 		#region 公共属性
-		public ICollection<EndPoint> Addresses
+		public IList<EndPoint> Addresses
 		{
 			get
 			{

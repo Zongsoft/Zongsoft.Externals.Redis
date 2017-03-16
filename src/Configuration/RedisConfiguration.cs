@@ -35,46 +35,39 @@ namespace Zongsoft.Externals.Redis.Configuration
 	public class RedisConfiguration : OptionConfigurationElement, IRedisConfiguration
 	{
 		#region 常量定义
-		private const string XML_DEFAULT_ATTRIBUTE = "defaultConnection";
-
-		private const string XML_CONNECTIONSTRING_ELEMENT = "connectionString";
-		private const string XML_CONNECTIONSTRINGS_COLLECTION = "connectionStrings";
+		private const string XML_CONNECTIONPATH_ATTRIBUTE = "connectionPath";
 		#endregion
 
 		#region 公共属性
-		[OptionConfigurationProperty(XML_DEFAULT_ATTRIBUTE, Behavior = OptionConfigurationPropertyBehavior.IsRequired)]
-		public string DefaultConnectionName
+		[OptionConfigurationProperty(XML_CONNECTIONPATH_ATTRIBUTE, Behavior = OptionConfigurationPropertyBehavior.IsRequired)]
+		public string ConnectionPath
 		{
 			get
 			{
-				return (string)this[XML_DEFAULT_ATTRIBUTE];
+				return (string)this[XML_CONNECTIONPATH_ATTRIBUTE];
 			}
 			set
 			{
 				if(string.IsNullOrWhiteSpace(value))
 					throw new ArgumentNullException();
 
-				this[XML_DEFAULT_ATTRIBUTE] = value;
+				this[XML_CONNECTIONPATH_ATTRIBUTE] = value;
 			}
 		}
 
-		public string DefaultConnectionString
+		public string ConnectionString
 		{
 			get
 			{
-				if(string.IsNullOrWhiteSpace(this.DefaultConnectionName))
+				if(string.IsNullOrWhiteSpace(this.ConnectionPath))
 					return null;
 
-				return (string)this.ConnectionStrings.GetValue(this.DefaultConnectionName);
-			}
-		}
+				var connectionString = Zongsoft.ComponentModel.ApplicationContextBase.Current.OptionManager.GetOptionValue(this.ConnectionPath) as ConnectionStringElement;
 
-		[OptionConfigurationProperty(XML_CONNECTIONSTRINGS_COLLECTION, Type = typeof(SettingElementCollection), ElementName = XML_CONNECTIONSTRING_ELEMENT, Behavior = OptionConfigurationPropertyBehavior.IsRequired)]
-		public ISettingsProvider ConnectionStrings
-		{
-			get
-			{
-				return (SettingElementCollection)this[XML_CONNECTIONSTRINGS_COLLECTION];
+				if(connectionString == null)
+					throw new OptionConfigurationException($"Not found connection string by '{this.ConnectionPath}' configuration path.");
+
+				return connectionString.Value;
 			}
 		}
 		#endregion

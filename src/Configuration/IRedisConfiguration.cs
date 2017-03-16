@@ -30,18 +30,7 @@ namespace Zongsoft.Externals.Redis.Configuration
 {
 	public interface IRedisConfiguration
 	{
-		string DefaultConnectionName
-		{
-			get;
-			set;
-		}
-
-		string DefaultConnectionString
-		{
-			get;
-		}
-
-		Zongsoft.Options.ISettingsProvider ConnectionStrings
+		string ConnectionString
 		{
 			get;
 		}
