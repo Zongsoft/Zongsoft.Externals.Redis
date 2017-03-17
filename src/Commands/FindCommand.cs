@@ -29,14 +29,14 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
-	public class GetKeysCommand : RedisCommandBase
+	public class FindCommand : RedisCommandBase
 	{
 		#region 构造函数
-		public GetKeysCommand() : base("GetKeys")
+		public FindCommand() : base("Find")
 		{
 		}
 
-		public GetKeysCommand(IRedisService redis) : base(redis, "GetKeys")
+		public FindCommand(IRedisService redis) : base(redis, "Find")
 		{
 		}
 		#endregion
@@ -52,18 +52,18 @@ namespace Zongsoft.Externals.Redis.Commands
 			for(int i = 0; i < context.Expression.Arguments.Length; i++)
 			{
 				//查找指定模式的键名集
-				result[i] = this.Redis.GetKeys(context.Expression.Arguments[i]);
+				result[i] = this.Redis.Find(context.Expression.Arguments[i]);
 
 				//打印模式字符串
-				context.Output.WriteLine(Services.CommandOutletColor.Green, context.Expression.Arguments[i]);
+				context.Output.WriteLine(Services.CommandOutletColor.Magenta, context.Expression.Arguments[i]);
 
 				//定义遍历序号
 				var index = 1;
 
 				foreach(var key in result[i])
 				{
-					context.Output.Write(Services.CommandOutletColor.Gray, $"[{index++}]");
-					context.Output.WriteLine(key);
+					context.Output.Write(Services.CommandOutletColor.DarkGray, $"[{index++}] ");
+					context.Output.WriteLine(Services.CommandOutletColor.Green, key);
 				}
 
 				context.Output.WriteLine();

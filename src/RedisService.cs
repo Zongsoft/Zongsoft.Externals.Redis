@@ -87,7 +87,12 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Redis.GetServer(_settings.Addresses[0]).DatabaseSize(this.DatabaseId);
+				var addresses = this.Redis.GetEndPoints();
+
+				if(addresses != null && addresses.Length > 0)
+					return this.Redis.GetServer(_settings.Addresses[0]).DatabaseSize(this.DatabaseId);
+
+				return -1;
 			}
 		}
 
@@ -215,9 +220,14 @@ namespace Zongsoft.Externals.Redis
 			return database != null;
 		}
 
-		public IEnumerable<string> GetKeys(string pattern)
+		public IEnumerable<string> Find(string pattern)
 		{
-			return this.Redis.GetServer(_settings.Addresses[0]).Keys(this.DatabaseId, pattern, 20, CommandFlags.None).Select(p => p.ToString());
+			var addresses = this.Redis.GetEndPoints();
+
+			if(addresses != null && addresses.Length > 0)
+				return this.Redis.GetServer(addresses[0]).Keys(this.DatabaseId, pattern, 20, CommandFlags.None).Select(p => p.ToString());
+			else
+				return Enumerable.Empty<string>();
 		}
 
 		public string GetValue(string key)

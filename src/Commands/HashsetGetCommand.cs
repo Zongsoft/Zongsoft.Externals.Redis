@@ -62,7 +62,7 @@ namespace Zongsoft.Externals.Redis.Commands
 				context.Output.WriteLine(Services.CommandOutletColor.Magenta, $"The '{context.Expression.Arguments[i]}' hashset have {result[i].Count} entries:");
 
 				foreach(var item in result[i])
-					context.Output.WriteLine(item);
+					context.Output.WriteLine(item.ToString());
 
 				context.Output.WriteLine();
 			}

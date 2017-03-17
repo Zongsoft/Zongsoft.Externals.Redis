@@ -81,11 +81,11 @@ namespace Zongsoft.Externals.Redis
 		bool Use(int databaseId);
 
 		/// <summary>
-		/// 查找当前库中的键名集。
+		/// 在当前库中查找满足指定模式的键名集。
 		/// </summary>
 		/// <param name="pattern">指定要查找的模式。</param>
 		/// <returns>返回符合指定模式的键名集。</returns>
-		IEnumerable<string> GetKeys(string pattern);
+		IEnumerable<string> Find(string pattern);
 
 		/// <summary>
 		/// 获取指定键对应的字符串值。
