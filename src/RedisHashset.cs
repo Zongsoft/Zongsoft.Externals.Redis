@@ -242,10 +242,10 @@ namespace Zongsoft.Externals.Redis
 		#region 遍历枚举
 		public IEnumerator<string> GetEnumerator()
 		{
-			return this.Database.SetScan(this.Name).Cast<string>().GetEnumerator();
+			return this.Database.SetScan(this.Name).Select(p => p.ToString()).GetEnumerator();
 		}
 
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return this.GetEnumerator();
 		}

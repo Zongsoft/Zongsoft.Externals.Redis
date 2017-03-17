@@ -295,7 +295,7 @@ namespace Zongsoft.Externals.Redis
 		#region 遍历枚举
 		public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
 		{
-			return this.Database.HashScan(this.Name).Cast<KeyValuePair<string, string>>().GetEnumerator();
+			return this.Database.HashScan(this.Name).Select(p => new KeyValuePair<string, string>(p.Name.ToString(), p.Value.ToString())).GetEnumerator();
 		}
 
 		IDictionaryEnumerator IDictionary.GetEnumerator()
