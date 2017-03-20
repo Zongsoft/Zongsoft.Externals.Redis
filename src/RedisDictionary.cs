@@ -31,7 +31,7 @@ using System.Linq;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisDictionary : RedisObjectBase, IRedisDictionary, IDictionary, Zongsoft.Common.IAccumulator, Zongsoft.Runtime.Caching.ICache
+	public class RedisDictionary : RedisObjectBase, IRedisDictionary, IDictionary, Zongsoft.Common.ISequence, Zongsoft.Runtime.Caching.ICache
 	{
 		#region 构造函数
 		public RedisDictionary(string name, StackExchange.Redis.IDatabase database) : base(name, database)
@@ -107,16 +107,6 @@ namespace Zongsoft.Externals.Redis
 		public IReadOnlyDictionary<string, string> GetAllEntries()
 		{
 			return this.Database.HashGetAll(this.Name).ToDictionary(entry => (string)entry.Name, entry => (string)entry.Value);
-		}
-
-		public long Increment(string key, int interval = 1)
-		{
-			return this.Database.HashIncrement(this.Name, key, interval);
-		}
-
-		public long Decrement(string key, int interval = 1)
-		{
-			return this.Database.HashDecrement(this.Name, key, interval);
 		}
 
 		public void Add(string key, string value)
@@ -289,6 +279,38 @@ namespace Zongsoft.Externals.Redis
 				throw new NotSupportedException("The cache container isn't supports the feature, the expires must be zero.");
 
 			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, TimeSpan.Zero, requiredNotExists);
+		}
+		#endregion
+
+		#region 序列号器
+		public long Increment(string key, int interval = 1, int seed = 0)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			if(this.Database.HashSet(this.Name, key, seed, StackExchange.Redis.When.NotExists))
+				return seed;
+			else
+				return this.Database.HashIncrement(this.Name, key, interval);
+		}
+
+		public long Decrement(string key, int interval = 1, int seed = 0)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			if(this.Database.HashSet(this.Name, key, seed, StackExchange.Redis.When.NotExists))
+				return seed;
+			else
+				return this.Database.HashDecrement(this.Name, key, interval);
+		}
+
+		void Zongsoft.Common.ISequence.Reset(string key, int value)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			this.Database.HashSet(this.Name, key, value, StackExchange.Redis.When.Always);
 		}
 		#endregion
 

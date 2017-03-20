@@ -29,7 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public interface IRedisService : Zongsoft.Collections.IQueueProvider, Zongsoft.Runtime.Caching.ICacheProvider, IDisposable
+	public interface IRedisService : Zongsoft.Common.ISequence, Zongsoft.Collections.IQueueProvider, Zongsoft.Runtime.Caching.ICacheProvider, IDisposable
 	{
 		#region 公共属性
 		/// <summary>
@@ -60,14 +60,6 @@ namespace Zongsoft.Externals.Redis
 		/// 获取当前的Redis订阅器对象。
 		/// </summary>
 		RedisSubscriber Subscriber
-		{
-			get;
-		}
-
-		/// <summary>
-		/// 获取当前的Redis服务提供的序号器。
-		/// </summary>
-		Zongsoft.Common.ISequence Sequence
 		{
 			get;
 		}
@@ -144,9 +136,6 @@ namespace Zongsoft.Externals.Redis
 
 		bool Contains(string key);
 		bool Rename(string oldKey, string newKey);
-
-		long Increment(string key, int interval = 1);
-		long Decrement(string key, int interval = 1);
 
 		/// <summary>
 		/// 返回所有给定哈希集之间的交集。

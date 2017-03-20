@@ -15,13 +15,11 @@
 	<!-- 定义Redis服务对象 -->
 	<extension path="/Workspace/Externals">
 		<object name="Redis" type="Zongsoft.Externals.Redis.RedisService, Zongsoft.Externals.Redis" />
-		<object name="RedisSequence" value="{path:../Redis.Sequence}" />
 	</extension>
 
 	<!-- 将Redis相关服务挂载到默认服务容器中 -->
 	<extension path="/Workspace/Services">
 		<object name="Redis" value="{path:/Workspace/Externals/Redis}" />
-		<object name="RedisSequence" value="{path:/Workspace/Externals/RedisSequence}" />
 	</extension>
 
 	<!-- 为队列命令指定队列提供程序 -->

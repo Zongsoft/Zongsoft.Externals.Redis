@@ -29,7 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis
 {
-	public interface IRedisDictionary : IDictionary<string, string>, Zongsoft.Common.IAccumulator
+	public interface IRedisDictionary : IDictionary<string, string>, Zongsoft.Common.ISequence
 	{
 		/// <summary>
 		/// 获取当前<seealso cref="IRedisDictionary"/>字典的名称。

@@ -36,7 +36,7 @@ using StackExchange.Redis;
 namespace Zongsoft.Externals.Redis
 {
 	public class RedisService : MarshalByRefObject, IRedisService, IDisposable,
-	                            Zongsoft.Common.IAccumulator,
+	                            Zongsoft.Common.ISequence,
 	                            Zongsoft.Collections.IQueueProvider,
 	                            Zongsoft.Runtime.Caching.ICache,
 	                            Zongsoft.Runtime.Caching.ICacheProvider
@@ -45,7 +45,6 @@ namespace Zongsoft.Externals.Redis
 		private readonly object _syncRoot;
 		private readonly RedisServiceSettings _settings;
 		private readonly Lazy<RedisSubscriber> _subscriber;
-		private readonly Lazy<RedisSequence> _sequence;
 		private IConnectionMultiplexer _redis;
 		private IDatabase _database;
 		private int _isDisposed;
@@ -67,7 +66,6 @@ namespace Zongsoft.Externals.Redis
 			_syncRoot = new object();
 			_settings = new RedisServiceSettings(ConfigurationOptions.Parse(connectionString));
 			_subscriber = new Lazy<RedisSubscriber>(() => new RedisSubscriber(this.Redis.GetSubscriber()), true);
-			_sequence = new Lazy<RedisSequence>(() => new RedisSequence(this), true);
 		}
 
 		public RedisService(string connectionString)
@@ -78,7 +76,6 @@ namespace Zongsoft.Externals.Redis
 			_syncRoot = new object();
 			_settings = new RedisServiceSettings(ConfigurationOptions.Parse(connectionString));
 			_subscriber = new Lazy<RedisSubscriber>(() => new RedisSubscriber(this.Redis.GetSubscriber()), true);
-			_sequence = new Lazy<RedisSequence>(() => new RedisSequence(this), true);
 		}
 		#endregion
 
@@ -160,14 +157,6 @@ namespace Zongsoft.Externals.Redis
 			get
 			{
 				return _subscriber.Value;
-			}
-		}
-
-		public Common.ISequence Sequence
-		{
-			get
-			{
-				return _sequence.Value;
 			}
 		}
 
@@ -434,22 +423,6 @@ namespace Zongsoft.Externals.Redis
 			return this.Database.KeyExists(key);
 		}
 
-		public long Increment(string key, int interval = 1)
-		{
-			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException(nameof(key));
-
-			return this.Database.StringIncrement(key, interval);
-		}
-
-		public long Decrement(string key, int interval = 1)
-		{
-			if(string.IsNullOrWhiteSpace(key))
-				throw new ArgumentNullException(nameof(key));
-
-			return this.Database.StringDecrement(key, interval);
-		}
-
 		public HashSet<string> GetIntersect(params string[] sets)
 		{
 			if(sets == null)
@@ -491,6 +464,38 @@ namespace Zongsoft.Externals.Redis
 				return 0;
 
 			return this.Redis.GetSubscriber().Publish(channel, message);
+		}
+		#endregion
+
+		#region 序列号器
+		public long Increment(string key, int interval = 1, int seed = 0)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			if(this.Database.StringSet(key, seed, null, When.NotExists))
+				return seed;
+			else
+				return this.Database.StringIncrement(key, interval);
+		}
+
+		public long Decrement(string key, int interval = 1, int seed = 0)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			if(this.Database.StringSet(key, seed, null, When.NotExists))
+				return seed;
+			else
+				return this.Database.StringDecrement(key, interval);
+		}
+
+		void Zongsoft.Common.ISequence.Reset(string key, int value)
+		{
+			if(string.IsNullOrWhiteSpace(key))
+				throw new ArgumentNullException(nameof(key));
+
+			this.Database.StringSet(key, value, null, When.Always);
 		}
 		#endregion
 

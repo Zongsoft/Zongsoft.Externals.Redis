@@ -29,6 +29,7 @@ using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
 {
+	[Zongsoft.Services.CommandOption("seed", Type = typeof(int), DefaultValue = 0)]
 	[Zongsoft.Services.CommandOption("interval", Type = typeof(int), DefaultValue = 1)]
 	public class IncrementCommand : RedisCommandBase
 	{
@@ -48,12 +49,13 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length < 1)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
+			int seed = context.Expression.Options.GetValue<int>("seed");
 			int interval = context.Expression.Options.GetValue<int>("interval");
 			var result = new long[context.Expression.Arguments.Length];
 
 			for(int i = 0; i < context.Expression.Arguments.Length; i++)
 			{
-				result[i] = this.Redis.Increment(context.Expression.Arguments[i], interval);
+				result[i] = this.Redis.Increment(context.Expression.Arguments[i], interval, seed);
 				context.Output.WriteLine(result[i].ToString());
 			}
 
