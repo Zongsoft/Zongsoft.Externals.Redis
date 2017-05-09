@@ -67,7 +67,7 @@ namespace Zongsoft.Externals.Redis
 		#region 公共方法
 		public HashSet<string> GetExcept(params string[] other)
 		{
-			return new HashSet<string>(this.Database.SetCombine(SetOperation.Difference, this.GetRedisKeys(other)).Cast<string>());
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Difference, this.GetRedisKeys(other)).ToStringArray());
 		}
 
 		public long SetExcept(string destination, params string[] other)
@@ -77,7 +77,7 @@ namespace Zongsoft.Externals.Redis
 
 		public HashSet<string> GetIntersect(params string[] other)
 		{
-			return new HashSet<string>(this.Database.SetCombine(SetOperation.Intersect, this.GetRedisKeys(other)).Cast<string>());
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Intersect, this.GetRedisKeys(other)).ToStringArray());
 		}
 
 		public long SetIntersect(string destination, params string[] other)

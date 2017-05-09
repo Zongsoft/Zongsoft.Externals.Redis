@@ -162,7 +162,7 @@ namespace Zongsoft.Externals.Redis
 			if(length < 1)
 				throw new ArgumentOutOfRangeException("length");
 
-			return this.Database.ListRange(this.Name, 0, length - 1).Cast<string>();
+			return this.Database.ListRange(this.Name, 0, length - 1).ToStringArray();
 		}
 
 		public object Peek()
@@ -173,9 +173,9 @@ namespace Zongsoft.Externals.Redis
 		public IEnumerable Take(int index, int length)
 		{
 			if(length > 0)
-				return this.Database.ListRange(this.Name, index, index + length - 1).Cast<string>();
+				return this.Database.ListRange(this.Name, index, index + length - 1).ToStringArray();
 			else
-				return this.Database.ListRange(this.Name, index).Cast<string>();
+				return this.Database.ListRange(this.Name, index).ToStringArray();
 		}
 
 		public object Take(int index)

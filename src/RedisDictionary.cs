@@ -72,7 +72,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Database.HashKeys(this.Name).Cast<string>().ToArray();
+				return this.Database.HashKeys(this.Name).ToStringArray();
 			}
 		}
 
@@ -80,7 +80,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Database.HashValues(this.Name).Cast<string>().ToArray();
+				return this.Database.HashValues(this.Name).ToStringArray();
 			}
 		}
 		#endregion
@@ -101,7 +101,7 @@ namespace Zongsoft.Externals.Redis
 
 		public IReadOnlyList<string> GetValues(params string[] keys)
 		{
-			return this.Database.HashGet(this.Name, keys.Cast<StackExchange.Redis.RedisValue>().ToArray()).Cast<string>().ToArray();
+			return this.Database.HashGet(this.Name, keys.ToRedisValues()).ToStringArray();
 		}
 
 		public IReadOnlyDictionary<string, string> GetAllEntries()
@@ -377,7 +377,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Database.HashKeys(this.Name).Cast<string>().ToArray();
+				return this.Database.HashKeys(this.Name).ToStringArray();
 			}
 		}
 
@@ -393,7 +393,7 @@ namespace Zongsoft.Externals.Redis
 		{
 			get
 			{
-				return this.Database.HashValues(this.Name).Cast<string>().ToArray();
+				return this.Database.HashValues(this.Name).ToStringArray();
 			}
 		}
 

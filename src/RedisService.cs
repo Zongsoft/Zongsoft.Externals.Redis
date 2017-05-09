@@ -232,7 +232,7 @@ namespace Zongsoft.Externals.Redis
 			if(keys == null || keys.Length == 0)
 				throw new ArgumentNullException(nameof(keys));
 
-			return this.Database.StringGet(keys.Cast<RedisKey>().ToArray()).Cast<string>().ToArray();
+			return this.Database.StringGet(keys.ToRedisKeys()).ToStringArray();
 		}
 
 		public string ExchangeValue(string key, string value)
@@ -404,7 +404,7 @@ namespace Zongsoft.Externals.Redis
 			if(keys == null || keys.Length == 0)
 				throw new ArgumentNullException(nameof(keys));
 
-			this.Database.KeyDelete(keys.Cast<RedisKey>().ToArray());
+			this.Database.KeyDelete(keys.ToRedisKeys());
 		}
 
 		public bool Contains(string key)
@@ -428,7 +428,7 @@ namespace Zongsoft.Externals.Redis
 			if(sets == null)
 				throw new ArgumentNullException(nameof(sets));
 
-			return new HashSet<string>(this.Database.SetCombine(SetOperation.Intersect, sets.Cast<RedisKey>().ToArray()).Cast<string>());
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Intersect, sets.ToRedisKeys()).ToStringArray());
 		}
 
 		public long SetIntersect(string destination, params string[] sets)
@@ -436,7 +436,7 @@ namespace Zongsoft.Externals.Redis
 			if(sets == null)
 				throw new ArgumentNullException(nameof(sets));
 
-			return this.Database.SetCombineAndStore(SetOperation.Intersect, destination, sets.Cast<RedisKey>().ToArray());
+			return this.Database.SetCombineAndStore(SetOperation.Intersect, destination, sets.ToRedisKeys());
 		}
 
 		public HashSet<string> GetUnion(params string[] sets)
@@ -444,7 +444,7 @@ namespace Zongsoft.Externals.Redis
 			if(sets == null)
 				throw new ArgumentNullException(nameof(sets));
 
-			return new HashSet<string>(this.Database.SetCombine(SetOperation.Union, sets.Cast<RedisKey>().ToArray()).Cast<string>());
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Union, sets.ToRedisKeys()).ToStringArray());
 		}
 
 		public long SetUnion(string destination, params string[] sets)
@@ -452,7 +452,7 @@ namespace Zongsoft.Externals.Redis
 			if(sets == null)
 				throw new ArgumentNullException(nameof(sets));
 
-			return this.Database.SetCombineAndStore(SetOperation.Union, destination, sets.Cast<RedisKey>().ToArray());
+			return this.Database.SetCombineAndStore(SetOperation.Union, destination, sets.ToRedisKeys());
 		}
 
 		public long Publish(string channel, string message)
@@ -611,7 +611,7 @@ namespace Zongsoft.Externals.Redis
 			var set = value as ISet<string>;
 
 			if(set != null)
-				return this.Database.SetAdd(key, set.Cast<RedisValue>().ToArray()) > 0;
+				return this.Database.SetAdd(key, set.Select(p => (RedisValue)p).ToArray()) > 0;
 
 			if(this.Batch<DictionaryEntry>(value as IDictionary,
 							(batch, entry) =>
