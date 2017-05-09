@@ -87,7 +87,7 @@ namespace Zongsoft.Externals.Redis
 
 		public HashSet<string> GetUnion(params string[] other)
 		{
-			return new HashSet<string>(this.Database.SetCombine(SetOperation.Union, this.GetRedisKeys(other)).Cast<string>());
+			return new HashSet<string>(this.Database.SetCombine(SetOperation.Union, this.GetRedisKeys(other)).Select(p => p.ToString()));
 		}
 
 		public long SetUnion(string destination, params string[] other)
@@ -97,7 +97,7 @@ namespace Zongsoft.Externals.Redis
 
 		public HashSet<string> GetRandomValues(int count)
 		{
-			return new HashSet<string>(this.Database.SetRandomMembers(this.Name, count).Cast<string>());
+			return new HashSet<string>(this.Database.SetRandomMembers(this.Name, count).Select(p => p.ToString()));
 		}
 
 		public bool Move(string destination, string item)
@@ -107,7 +107,7 @@ namespace Zongsoft.Externals.Redis
 
 		public int RemoveRange(params string[] items)
 		{
-			return (int)this.Database.SetRemove(this.Name, items.Cast<RedisValue>().ToArray());
+			return (int)this.Database.SetRemove(this.Name, items.Select(p => (RedisValue)p).ToArray());
 		}
 
 		public bool Remove(string item)
@@ -125,7 +125,7 @@ namespace Zongsoft.Externals.Redis
 			if(items == null)
 				return 0;
 
-			return (int)this.Database.SetAdd(this.Name, items.Cast<RedisValue>().ToArray());
+			return (int)this.Database.SetAdd(this.Name, items.Select(p => (RedisValue)p).ToArray());
 		}
 
 		public int AddRange(params string[] items)
