@@ -29,7 +29,7 @@
 
 	<!-- 定义Redis命令的根节点 -->
 	<extension path="/Workbench/Executor/Commands">
-		<commandNode name="Redis" />
+		<object name="Redis" />
 	</extension>
 
 	<!-- 定义常用的Redis命令集 -->
@@ -42,15 +42,15 @@
 		<object name="Increment" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.IncrementCommand, Zongsoft.Externals.Redis" />
 		<object name="Decrement" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DecrementCommand, Zongsoft.Externals.Redis" />
 
-		<commandNode name="Queue">
+		<object name="Queue">
 			<object name="In" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueEnqueueCommand, Zongsoft.Externals.Redis" />
 			<object name="Out" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueDequeueCommand, Zongsoft.Externals.Redis" />
 			<object name="Count" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueCountCommand, Zongsoft.Externals.Redis" />
 			<object name="Clear" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueClearCommand, Zongsoft.Externals.Redis" />
 			<object name="Take" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.QueueTakeCommand, Zongsoft.Externals.Redis" />
-		</commandNode>
+		</object>
 
-		<commandNode name="Dictionary">
+		<object name="Dictionary">
 			<object name="Get" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DictionaryGetCommand, Zongsoft.Externals.Redis" />
 			<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DictionarySetCommand, Zongsoft.Externals.Redis" />
 			<object name="Count" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DictionaryCountCommand, Zongsoft.Externals.Redis" />
@@ -58,14 +58,14 @@
 			<object name="Remove" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DictionaryRemoveCommand, Zongsoft.Externals.Redis" />
 			<object name="Increment" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DictionaryIncrementCommand, Zongsoft.Externals.Redis" />
 			<object name="Decrement" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.DictionaryDecrementCommand, Zongsoft.Externals.Redis" />
-		</commandNode>
+		</object>
 
-		<commandNode name="Hashset">
+		<object name="Hashset">
 			<object name="Get" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.HashsetGetCommand, Zongsoft.Externals.Redis" />
 			<object name="Set" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.HashsetSetCommand, Zongsoft.Externals.Redis" />
 			<object name="Count" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.HashsetCountCommand, Zongsoft.Externals.Redis" />
 			<object name="Clear" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.HashsetClearCommand, Zongsoft.Externals.Redis" />
 			<object name="Remove" redis="{path:/Workspace/Externals/Redis}" type="Zongsoft.Externals.Redis.Commands.HashsetRemoveCommand, Zongsoft.Externals.Redis" />
-		</commandNode>
+		</object>
 	</extension>
 </plugin>
