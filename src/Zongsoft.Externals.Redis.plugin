@@ -22,11 +22,6 @@
 		<object name="Redis" value="{path:/Workspace/Externals/Redis}" />
 	</extension>
 
-	<!-- 为队列命令指定队列提供程序 -->
-	<extension path="/Workbench/Executor/Commands/Collections">
-		<queue.queueProvider>{srv:Redis}</queue.queueProvider>
-	</extension>
-
 	<!-- 定义Redis命令的根节点 -->
 	<extension path="/Workbench/Executor/Commands">
 		<object name="Redis" />
