@@ -62,7 +62,7 @@ namespace Zongsoft.Externals.Redis.Configuration
 				if(string.IsNullOrWhiteSpace(this.ConnectionPath))
 					return null;
 
-				var connectionString = Zongsoft.ComponentModel.ApplicationContextBase.Current.OptionManager.GetOptionValue(this.ConnectionPath) as ConnectionStringElement;
+				var connectionString = Zongsoft.Services.ApplicationContext.Current.Options.GetOptionValue(this.ConnectionPath) as ConnectionStringElement;
 
 				if(connectionString == null)
 					throw new OptionConfigurationException($"Not found connection string by '{this.ConnectionPath}' configuration path.");
