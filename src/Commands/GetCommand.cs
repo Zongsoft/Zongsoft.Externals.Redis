@@ -25,6 +25,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Zongsoft.Externals.Redis.Commands
@@ -47,6 +48,7 @@ namespace Zongsoft.Externals.Redis.Commands
 			if(context.Expression.Arguments.Length < 1)
 				throw new Zongsoft.Services.CommandException("Missing arguments.");
 
+			int index = 0;
 			var result = new List<object>(context.Expression.Arguments.Length);
 
 			for(int i = 0; i < context.Expression.Arguments.Length; i++)
@@ -64,20 +66,55 @@ namespace Zongsoft.Externals.Redis.Commands
 					var entryType = this.Redis.GetEntryType(context.Expression.Arguments[i]);
 					context.Output.Write(Services.CommandOutletColor.DarkGray, $"[{entryType}] ");
 
+					var expiry = this.Redis.GetEntryExpiry(context.Expression.Arguments[i]);
+					if(expiry.HasValue)
+						context.Output.Write(Services.CommandOutletColor.DarkCyan, expiry.Value.ToString() + " ");
+
 					switch(entryType)
 					{
 						case RedisEntryType.String:
-							context.Output.WriteLine(result[i]);
+							context.Output.WriteLine(entry);
 							break;
 						case RedisEntryType.Dictionary:
 							context.Output.WriteLine(Services.CommandOutletColor.DarkYellow, $"The '{context.Expression.Arguments[i]}' dictionary have {((IRedisDictionary)entry).Count} entries.");
+
+							foreach(DictionaryEntry item in (IDictionary)entry)
+							{
+								context.Output.Write(Services.CommandOutletColor.Gray, $"[{(++index).ToString()}] ");
+								context.Output.Write(Services.CommandOutletColor.DarkGreen, item.Key.ToString());
+								context.Output.Write(Services.CommandOutletColor.Cyan, " : ");
+								context.Output.WriteLine(Services.CommandOutletColor.DarkGreen, item.Value.ToString());
+							}
+
 							break;
 						case RedisEntryType.List:
 							context.Output.WriteLine(Services.CommandOutletColor.DarkYellow, $"The '{context.Expression.Arguments[i]}' list(queue) have {((IRedisQueue)entry).Count} entries.");
+
+							foreach(object item in (IEnumerable)entry)
+							{
+								context.Output.Write(Services.CommandOutletColor.Gray, $"[{(++index).ToString()}] ");
+
+								if(item == null)
+									context.Output.WriteLine(Services.CommandOutletColor.DarkGray, "NULL");
+								else
+									context.Output.WriteLine(Services.CommandOutletColor.DarkGreen, item.ToString());
+							}
+
 							break;
 						case RedisEntryType.Set:
 						case RedisEntryType.SortedSet:
 							context.Output.WriteLine(Services.CommandOutletColor.DarkYellow, $"The '{context.Expression.Arguments[i]}' hashset have {((IRedisHashset)entry).Count} entries.");
+
+							foreach(object item in (IEnumerable)entry)
+							{
+								context.Output.Write(Services.CommandOutletColor.Gray, $"[{(++index).ToString()}] ");
+
+								if(item == null)
+									context.Output.WriteLine(Services.CommandOutletColor.DarkGray, "NULL");
+								else
+									context.Output.WriteLine(Services.CommandOutletColor.DarkGreen, item.ToString());
+							}
+
 							break;
 						default:
 							context.Output.WriteLine();
