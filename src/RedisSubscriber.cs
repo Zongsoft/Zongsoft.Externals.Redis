@@ -29,10 +29,9 @@ using System.Linq;
 
 namespace Zongsoft.Externals.Redis
 {
-	public class RedisSubscriber : MarshalByRefObject, Zongsoft.Common.IDisposableObject
+	public class RedisSubscriber : MarshalByRefObject
 	{
 		#region 事件定义
-		public event EventHandler<Zongsoft.Common.DisposedEventArgs> Disposed;
 		public event EventHandler<RedisChannelEventArgs> Subscribed;
 		public event EventHandler<RedisChannelEventArgs> Unsubscribed;
 		public event EventHandler<RedisChannelMessageEventArgs> Received;
@@ -154,9 +153,6 @@ namespace Zongsoft.Externals.Redis
 		{
 			this.Dispose(true);
 			GC.SuppressFinalize(this);
-
-			//激发“Disposed”事件
-			this.Disposed?.Invoke(this, new Common.DisposedEventArgs(true));
 		}
 
 		protected virtual void Dispose(bool disposing)
