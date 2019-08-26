@@ -275,7 +275,7 @@ namespace Zongsoft.Externals.Redis
 
 		bool Zongsoft.Runtime.Caching.ICache.SetValue(string key, object value, DateTime expires, bool requiredNotExists = false)
 		{
-			if(expires > DateTime.Now)
+			if(expires.ToUniversalTime() > DateTime.UtcNow)
 				throw new NotSupportedException("The cache container isn't supports the feature, the expires must be zero.");
 
 			return ((Zongsoft.Runtime.Caching.ICache)this).SetValue(key, value, TimeSpan.Zero, requiredNotExists);

@@ -583,7 +583,7 @@ namespace Zongsoft.Externals.Redis
 			if(string.IsNullOrWhiteSpace(key))
 				throw new ArgumentNullException(nameof(key));
 
-			return this.SetValueCore(key, value, expires - DateTime.Now, requiredNotExists);
+			return this.SetValueCore(key, value, expires.ToUniversalTime() - DateTime.UtcNow, requiredNotExists);
 		}
 
 		private bool SetValueCore(string key, object value, TimeSpan duration, bool requiredNotExists = false)
